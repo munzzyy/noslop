@@ -52,7 +52,7 @@ unslop --quiet draft.md             # verdict line only
 unslop --json draft.md              # results as JSON
 ```
 
-The exit code is 0 when every input scores under the threshold and 1 otherwise, so it slots into hooks and CI. The default threshold is 10; change it with `--threshold`.
+The exit code is 0 when every input scores under the threshold, 1 when something scores over it, and 2 if a path couldn't be read at all - so a crash and a lint finding never look the same to a script. The default threshold is 10; change it with `--threshold`. `docs/*.md` works even on Windows shells that don't expand the glob themselves.
 
 In markdown files, fenced code blocks and inline code are not scored, since code samples aren't prose. Pass `--markdown` to get the same treatment for stdin or other file extensions.
 
