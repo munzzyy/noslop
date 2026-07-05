@@ -32,6 +32,20 @@ def test_not_just_but_is_flagged():
     assert any("not just" in label for label in labels)
 
 
+def test_bold_label_bullets_are_flagged():
+    # both forms of the "**Term:** explanation" list tell
+    inside = "- **Speed:** fast\n- **Safety:** safe\n- **Scale:** grows\n- **Cost:** cheap\n"
+    after = "- **Speed**: fast\n- **Safety**: safe\n- **Scale**: grows\n"
+    assert unslop.analyze(inside)["bold_label_bullets"] == 4
+    assert unslop.analyze(after)["bold_label_bullets"] == 3
+
+
+def test_plain_bold_bullets_are_not_flagged():
+    # a bullet that just bolds a word (no colon) is fine, not the label tell
+    r = unslop.analyze("- **Note** the thing runs fast\n- another normal bullet here\n")
+    assert r["bold_label_bullets"] == 0
+
+
 def test_empty_input_is_safe():
     r = unslop.analyze("")
     assert r["words"] == 1
