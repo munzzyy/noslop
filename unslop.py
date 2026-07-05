@@ -25,7 +25,7 @@ import json
 import glob
 import argparse
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 # Words that show up far more in LLM prose than in how people actually write.
 BUZZWORDS = [
