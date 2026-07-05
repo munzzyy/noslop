@@ -23,9 +23,20 @@ import sys
 import re
 import json
 import glob
+import os
+import fnmatch
 import argparse
 
 __version__ = "0.2.1"
+
+# analyze()'s return dict is unslop's only machine-readable contract. If you
+# add, rename, or remove a top-level key, update this set and bump the
+# version - anything parsing --json is relying on these names staying put.
+JSON_SCHEMA_KEYS = {
+    "words", "score_per_1k", "verdict", "buzzwords", "phrases", "patterns",
+    "em_dashes", "em_dash_excess", "emoji", "bold_label_bullets",
+    "sentence_uniformity_cv",
+}
 
 # Words that show up far more in LLM prose than in how people actually write.
 BUZZWORDS = [
@@ -151,7 +162,128 @@ def line_of(text, idx):
     return text.count("\n", 0, idx) + 1
 
 
-def analyze(text):
+CONFIG_NAMES = (".unslop.json", ".unsloprc")
+
+
+def find_config(start_dir):
+    """Walk upward from start_dir looking for a config file, stopping at a
+    filesystem root or a .git directory (repo boundary). Returns a path or
+    None. JSON only, no extra parsing dependency and no 3.8-vs-3.11 tomllib
+    split to reason about."""
+    d = os.path.abspath(start_dir or os.getcwd())
+    while True:
+        for name in CONFIG_NAMES:
+            candidate = os.path.join(d, name)
+            if os.path.isfile(candidate):
+                return candidate
+        if os.path.isdir(os.path.join(d, ".git")):
+            return None
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def load_config(path):
+    """Read a JSON config with optional ignore_words / ignore_phrases /
+    extra_words / extra_phrases keys. Unknown keys are ignored so the format
+    can grow without breaking old configs. Raises ValueError with a plain
+    message on bad JSON or a non-object top level, so main() can report it
+    without a traceback."""
+    with open(path, "r", encoding="utf-8-sig") as fh:
+        try:
+            data = json.load(fh)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path}: invalid JSON ({exc})")
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: top level must be a JSON object")
+    return {
+        "ignore_words": list(data.get("ignore_words", [])),
+        "ignore_phrases": list(data.get("ignore_phrases", [])),
+        "extra_words": list(data.get("extra_words", [])),
+        "extra_phrases": list(data.get("extra_phrases", [])),
+    }
+
+
+def apply_config(config, buzzwords, phrases):
+    """Return new (buzzwords, phrases) lists with the config's ignore/extra
+    entries applied. Comparisons are case-insensitive since the lists
+    themselves are matched against lowercased text."""
+    ignore_w = {w.lower() for w in config["ignore_words"]}
+    ignore_p = {p.lower() for p in config["ignore_phrases"]}
+    words = [w for w in buzzwords if w.lower() not in ignore_w]
+    phr = [p for p in phrases if p.lower() not in ignore_p]
+    for w in config["extra_words"]:
+        if w.lower() not in ignore_w and w not in words:
+            words.append(w)
+    for p in config["extra_phrases"]:
+        if p.lower() not in ignore_p and p not in phr:
+            phr.append(p)
+    return words, phr
+
+
+def load_ignore_file(path):
+    """Read a .unslopignore file: one gitignore-style glob per line, blank
+    lines and #-comments skipped."""
+    patterns = []
+    with open(path, "r", encoding="utf-8-sig") as fh:
+        for line in fh:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                patterns.append(line)
+    return patterns
+
+
+def is_ignored(path, patterns):
+    """Match a path against .unslopignore-style patterns. Matches against
+    both the full (forward-slash-normalized) path and the bare filename, so
+    a pattern like "CHANGELOG.md" excludes it anywhere in the tree, same as
+    gitignore's default behavior for a pattern with no slash."""
+    norm = path.replace(os.sep, "/")
+    base = os.path.basename(norm)
+    for pat in patterns:
+        if fnmatch.fnmatch(norm, pat) or fnmatch.fnmatch(base, pat):
+            return True
+    return False
+
+
+def to_rdjsonl(path, r):
+    """Yield rdjsonl (reviewdog diagnostic format) lines for one file's
+    result: one JSON object per hit, message/location/severity shaped so
+    `unslop --rdjson file.md | reviewdog -f=rdjsonl -name=unslop` works with
+    no extra glue. https://github.com/reviewdog/reviewdog/tree/master/proto/rdf
+    """
+    src = path if path != "-" else "<stdin>"
+    lines = []
+
+    def emit(message, line, severity):
+        lines.append(json.dumps({
+            "message": message,
+            "location": {"path": src, "range": {"start": {"line": max(line, 1)}}},
+            "severity": severity,
+        }))
+
+    for word, n, ls in r["buzzwords"]:
+        for ln in ls:
+            emit(f'buzzword: "{word}" reads as an AI tell', ln, "WARNING")
+    for phrase, n, ls in r["phrases"]:
+        for ln in ls:
+            emit(f'filler phrase: "{phrase}"', ln, "WARNING")
+    for label, n, weight, hint, ls in r["patterns"]:
+        severity = "WARNING" if weight else "INFO"
+        for ln in ls:
+            emit(f"{label} - {hint}", ln, severity)
+    return lines
+
+
+def analyze(text, buzzwords=None, phrases=None):
+    """buzzwords/phrases default to the built-in BUZZWORDS/PHRASES lists.
+    Pass overrides (see apply_config) to run with a project's config
+    applied without mutating the module-level lists."""
+    if buzzwords is None:
+        buzzwords = BUZZWORDS
+    if phrases is None:
+        phrases = PHRASES
     lower = text.lower()
     words = re.findall(r"[A-Za-z][A-Za-z'\-]+", text)
     wc = max(len(words), 1)
@@ -162,9 +294,9 @@ def analyze(text):
     # "let's dive" plus "dive into", and "rich tapestry" doesn't also
     # count as "tapestry".
     spans = []
-    for w in BUZZWORDS:
+    for w in buzzwords:
         spans += [(s, e, "buzz", w) for s, e in find_all(lower, w)]
-    for p in PHRASES:
+    for p in phrases:
         spans += [(s, e, "phrase", p) for s, e in find_all(lower, p)]
     spans.sort(key=lambda h: (h[0], -h[1]))
     kept, last_end = [], -1
@@ -277,13 +409,39 @@ def main(argv=None):
     ap.add_argument("paths", nargs="*", default=["-"], metavar="path",
                     help="text files, or - for stdin (default: stdin)")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
+    ap.add_argument("--rdjson", action="store_true",
+                    help="emit rdjsonl (reviewdog diagnostic format) instead of the normal report")
     ap.add_argument("--quiet", action="store_true", help="verdict line only")
     ap.add_argument("--markdown", action="store_true",
                     help="skip fenced/inline code when scoring (automatic for .md files)")
     ap.add_argument("--threshold", type=float, default=10.0,
                     help="score at/above which exit code is 1 (default 10)")
+    ap.add_argument("--config", metavar="PATH",
+                    help="path to a .unslop.json config (default: search upward from cwd)")
+    ap.add_argument("--no-config", action="store_true",
+                    help="ignore any .unslop.json / .unsloprc, even if one is found")
+    ap.add_argument("--exclude", action="append", default=[], metavar="PATTERN",
+                    help="glob pattern to skip (repeatable); also see .unslopignore")
     ap.add_argument("--version", action="version", version=f"unslop {__version__}")
     args = ap.parse_args(argv)
+
+    buzzwords, phrases = BUZZWORDS, PHRASES
+    if not args.no_config:
+        if args.config and not os.path.isfile(args.config):
+            print(f"unslop: {args.config}: no such file", file=sys.stderr)
+            return 2
+        config_path = args.config or find_config(os.getcwd())
+        if config_path:
+            try:
+                config = load_config(config_path)
+            except (ValueError, OSError) as exc:
+                print(f"unslop: {exc}", file=sys.stderr)
+                return 2
+            buzzwords, phrases = apply_config(config, BUZZWORDS, PHRASES)
+
+    ignore_patterns = list(args.exclude)
+    if os.path.isfile(".unslopignore"):
+        ignore_patterns += load_ignore_file(".unslopignore")
 
     # Expand any glob argument ourselves. POSIX shells already do this
     # before we see argv, but PowerShell and cmd.exe never expand
@@ -293,10 +451,13 @@ def main(argv=None):
     for p in (args.paths or ["-"]):
         if p != "-" and any(ch in p for ch in "*?["):
             matches = sorted(glob.glob(p))
+            matches = [m for m in matches if not is_ignored(m, ignore_patterns)]
             if not matches:
                 print(f"unslop: {p}: no files match", file=sys.stderr)
                 return 2
             paths.extend(matches)
+        elif p != "-" and is_ignored(p, ignore_patterns):
+            continue
         else:
             paths.append(p)
 
@@ -307,12 +468,16 @@ def main(argv=None):
         except OSError as exc:
             print(f"unslop: {p}: {exc.strerror or exc}", file=sys.stderr)
             return 2
-        r = analyze(text)
+        r = analyze(text, buzzwords=buzzwords, phrases=phrases)
         if p != "-":
             r["path"] = p
         results.append((p, r))
 
-    if args.json:
+    if args.rdjson:
+        for p, r in results:
+            for line in to_rdjsonl(p, r):
+                print(line)
+    elif args.json:
         payload = results[0][1] if len(results) == 1 else [r for _, r in results]
         print(json.dumps(payload, indent=2))
     else:

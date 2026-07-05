@@ -282,3 +282,137 @@ def test_glob_argument_matching_nothing_errors_cleanly():
         assert code == 2
         assert out == ""
         assert "no files match" in err
+
+
+def run_cli_in(d, argv):
+    old_cwd = os.getcwd()
+    os.chdir(d)
+    try:
+        return run_cli(argv)
+    finally:
+        os.chdir(old_cwd)
+
+
+def run_cli_err_in(d, argv):
+    old_cwd = os.getcwd()
+    os.chdir(d)
+    try:
+        return run_cli_err(argv)
+    finally:
+        os.chdir(old_cwd)
+
+
+def test_json_output_has_stable_key_set():
+    # analyze()'s return dict is unslop's only machine-readable contract;
+    # a future rename of a key should fail this test as a reminder to bump
+    # the version and note it, not slip out silently
+    r = unslop.analyze("Plain sentence with nothing notable in it at all.")
+    assert set(r.keys()) == unslop.JSON_SCHEMA_KEYS
+
+
+def test_config_file_ignores_words_and_phrases():
+    with tempfile.TemporaryDirectory() as d:
+        with open(os.path.join(d, ".unslop.json"), "w", encoding="utf-8") as fh:
+            json.dump({"ignore_words": ["robust"], "ignore_phrases": ["dive into"]}, fh)
+        p = os.path.join(d, "a.md")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("This is robust. Let's dive into it. It's also comprehensive.")
+        code, out = run_cli_in(d, ["a.md"])
+        assert "robust" not in out
+        assert "dive into" not in out
+        assert "comprehensive" in out
+
+
+def test_config_file_adds_extra_words():
+    with tempfile.TemporaryDirectory() as d:
+        with open(os.path.join(d, ".unslop.json"), "w", encoding="utf-8") as fh:
+            json.dump({"extra_words": ["frobnicate"]}, fh)
+        p = os.path.join(d, "a.md")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("Please frobnicate the widget before shipping it.")
+        code, out = run_cli_in(d, ["a.md"])
+        assert "frobnicate" in out
+
+
+def test_no_config_flag_bypasses_config_file():
+    with tempfile.TemporaryDirectory() as d:
+        with open(os.path.join(d, ".unslop.json"), "w", encoding="utf-8") as fh:
+            json.dump({"ignore_words": ["robust"]}, fh)
+        p = os.path.join(d, "a.md")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("This is robust and nothing else.")
+        code, out = run_cli_in(d, ["--no-config", "a.md"])
+        assert "robust" in out
+
+
+def test_explicit_config_path_missing_errors_cleanly():
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "a.md")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("Plain text here.")
+        code, out, err = run_cli_err(["--config", os.path.join(d, "nope.json"), p])
+        assert code == 2
+        assert "no such file" in err
+
+
+def test_invalid_config_json_errors_cleanly():
+    with tempfile.TemporaryDirectory() as d:
+        with open(os.path.join(d, ".unslop.json"), "w", encoding="utf-8") as fh:
+            fh.write("not json")
+        p = os.path.join(d, "a.md")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("Plain text here.")
+        code, out, err = run_cli_err_in(d, ["a.md"])
+        assert code == 2
+        assert "invalid JSON" in err
+
+
+def test_exclude_flag_skips_matching_files():
+    with tempfile.TemporaryDirectory() as d:
+        slop = os.path.join(d, "slop.md")
+        clean = os.path.join(d, "clean.md")
+        with open(slop, "w", encoding="utf-8") as fh:
+            fh.write("This is robust, comprehensive, and cutting-edge.")
+        with open(clean, "w", encoding="utf-8") as fh:
+            fh.write("Plain text with nothing notable going on here.")
+        code, out = run_cli_in(d, ["--no-config", "--exclude", "slop.md", "slop.md", "clean.md"])
+        assert code == 0
+        assert "robust" not in out
+
+
+def test_unslopignore_file_skips_matching_files():
+    with tempfile.TemporaryDirectory() as d:
+        slop = os.path.join(d, "slop.md")
+        clean = os.path.join(d, "clean.md")
+        with open(slop, "w", encoding="utf-8") as fh:
+            fh.write("This is robust, comprehensive, and cutting-edge.")
+        with open(clean, "w", encoding="utf-8") as fh:
+            fh.write("Plain text with nothing notable going on here.")
+        with open(os.path.join(d, ".unslopignore"), "w", encoding="utf-8") as fh:
+            fh.write("slop.md\n")
+        code, out = run_cli_in(d, ["--no-config", "slop.md", "clean.md"])
+        assert code == 0
+        assert "robust" not in out
+
+
+def test_rdjson_emits_one_json_object_per_line():
+    r = unslop.analyze("This is robust and comprehensive stuff here today.")
+    lines = unslop.to_rdjsonl("a.md", r)
+    assert len(lines) >= 2
+    for line in lines:
+        obj = json.loads(line)
+        assert obj["location"]["path"] == "a.md"
+        assert obj["severity"] in ("WARNING", "INFO")
+        assert "message" in obj
+
+
+def test_rdjson_cli_flag_outputs_valid_jsonlines():
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "a.md")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("This is robust and comprehensive stuff here today.")
+        code, out = run_cli_in(d, ["--no-config", "--rdjson", "a.md"])
+        lines = [l for l in out.splitlines() if l.strip()]
+        assert len(lines) >= 1
+        for line in lines:
+            json.loads(line)
