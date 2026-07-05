@@ -1,0 +1,6 @@
+- id: unslop
+  name: unslop
+  description: Flag AI-tell patterns in prose before you commit it.
+  entry: unslop
+  language: python
+  files: \.(md|markdown|txt|rst)$

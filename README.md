@@ -43,6 +43,17 @@ The exit code is 0 when the writing reads human and 1 when it doesn't, so you ca
 unslop --quiet "$1" || echo "heads up, that message reads a bit AI ^"
 ```
 
+Or wire it in through [pre-commit](https://pre-commit.com), where it runs on your markdown and text files:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/munzzyy/unslop
+    rev: v0.1.0
+    hooks:
+      - id: unslop
+```
+
 ## What it flags
 
 - Buzzwords: delve, tapestry, robust, seamless, leverage, pivotal, myriad, harness, and the rest of the usual crowd.
