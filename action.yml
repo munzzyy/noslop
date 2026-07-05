@@ -1,0 +1,39 @@
+name: unslop
+description: Flag the AI tells in your writing before you send it.
+author: Cole Munz
+branding:
+  icon: edit-3
+  color: gray-dark
+
+inputs:
+  paths:
+    description: Files or glob patterns to check, space-separated (e.g. "docs/*.md README.md").
+    required: true
+  threshold:
+    description: Score at/above which unslop exits non-zero.
+    required: false
+    default: "10"
+  markdown:
+    description: Treat all inputs as markdown (skip fenced/inline code) even if the extension isn't .md.
+    required: false
+    default: "false"
+  python-version:
+    description: Python version to run unslop with.
+    required: false
+    default: "3.x"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - shell: bash
+      run: |
+        set -e
+        args=()
+        if [ "${{ inputs.markdown }}" = "true" ]; then
+          args+=(--markdown)
+        fi
+        args+=(--threshold "${{ inputs.threshold }}")
+        python "${{ github.action_path }}/unslop.py" "${args[@]}" ${{ inputs.paths }}
