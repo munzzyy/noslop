@@ -1,78 +1,105 @@
 # unslop
 
-A small command-line tool that flags the parts of your writing that sound like a chatbot, so you can fix them before you hit send.
+A command-line linter for prose. It flags the patterns that make writing sound like a chatbot: stock phrases, overused buzzwords, the `not just X, but Y` frame, em-dash pileups, emoji, sentences that all run the same length. You get a list of what it found, where it is, and a score. Fixing the text is up to you.
 
-It doesn't rewrite anything. It marks the spots — stock phrases, filler words, tired contrast frames, em-dash pileups, emoji, sentences that all run the same length — and gives you a score. The rewrite is yours.
+One Python file, standard library only, no network access.
 
-No dependencies. No network. Nothing phones home. One Python file.
+## Example
 
-## Why
+```
+$ unslop pr.txt
+words: 41   AI-tell score: 658.5/1k   -> reads as AI - needs a real rewrite
 
-AI writing has a sound. Once you can hear it, you hear it everywhere. It leans on the same few words. Everything gets hedged. The rhythm never changes.
+LLM buzzwords:
+   1x  delves             (lines 1)
+   1x  seamlessly         (lines 1)
+   1x  streamline         (lines 1)
+   1x  robust             (lines 2)
+   1x  comprehensive      (lines 3)
 
-Readers pick up on it too, even when they can't name it. In a pull request, a cover letter, an email to someone who matters, that sound gets your writing skimmed or trusted a little less. This is a gut-check before that happens.
+Filler phrases:
+   1x  "it's important to note" (lines 2)
+   1x  "not just a" (lines 2)
+   1x  "i hope this helps" (lines 3)
 
-It's a smell test, not a grade. A clean score doesn't mean the writing is good, and a flagged word isn't always wrong. Read what it says and use your judgment. Keep the em-dash if you meant it.
+Constructions:
+   1x  'not just X but Y' construction (lines 2)
+        -> state it plainly instead of the contrast frame
+$ echo $?
+1
+```
 
 ## Install
 
 ```bash
-pipx install unslop        # once it's on PyPI
+pipx install git+https://github.com/munzzyy/unslop
 ```
 
-Or skip that. It's one file with nothing to install:
+Or skip the install entirely, since it's a single file with no dependencies:
 
 ```bash
+curl -LO https://raw.githubusercontent.com/munzzyy/unslop/main/unslop.py
 python unslop.py --help
 ```
 
-## Use
+## Usage
 
 ```bash
-unslop draft.md                  # scan a file
-git show HEAD:MESSAGE | unslop    # scan a commit message
-echo "Let's dive into it" | unslop
-unslop --quiet draft.md           # just the verdict
-unslop --json draft.md            # machine-readable
+unslop draft.md                     # one file
+unslop docs/*.md                    # several files
+git log -1 --format=%B | unslop     # or stdin
+unslop --quiet draft.md             # verdict line only
+unslop --json draft.md              # results as JSON
 ```
 
-The exit code is 0 when the writing reads human and 1 when it doesn't, so you can drop it into a git hook or CI:
+The exit code is 0 when every input scores under the threshold and 1 otherwise, so it slots into hooks and CI. The default threshold is 10; change it with `--threshold`.
+
+In markdown files, fenced code blocks and inline code are not scored, since code samples aren't prose. Pass `--markdown` to get the same treatment for stdin or other file extensions.
+
+## Hooks
+
+As a plain git hook:
 
 ```bash
 # .git/hooks/commit-msg
-unslop --quiet "$1" || echo "heads up, that message reads a bit AI ^"
+unslop --quiet "$1" || echo "that commit message reads a bit AI"
 ```
 
-Or wire it in through [pre-commit](https://pre-commit.com), where it runs on your markdown and text files:
+Written like that it only warns. Drop the `|| echo` part if you want it to actually reject the commit.
+
+With [pre-commit](https://pre-commit.com):
 
 ```yaml
-# .pre-commit-config.yaml
 repos:
   - repo: https://github.com/munzzyy/unslop
-    rev: v0.1.0
+    rev: v0.2.0
     hooks:
       - id: unslop
 ```
 
-## What it flags
+That runs on the markdown, text, and rst files in each commit.
 
-- Buzzwords: delve, tapestry, robust, seamless, leverage, pivotal, myriad, harness, and the rest of the usual crowd.
-- Filler phrases: "it's important to note," "at the end of the day," "when it comes to," "I hope this helps."
-- The "not just X, but Y" frame, and its cousin "it isn't X, it's Y."
-- Em-dash pileups. One is fine. Five in a paragraph is a tell.
-- Emoji in prose.
-- Flat rhythm, where every sentence is the same length.
+## What it checks
 
-Under 10 per 1,000 words reads clean. 10 to 25 wants a pass. Past 25 needs real work. Move the cutoff with `--threshold`.
+The word and phrase lists live at the top of [unslop.py](unslop.py), so that's the place to edit when you disagree with them. Roughly:
 
-## Yes, running it on this README lights up
+- words LLMs lean on far more than people do (`delve`, `robust`, `leverage`, `tapestry`)
+- boilerplate phrases (`it's important to note`, `let's dive into`, `I hope this helps`)
+- the `not just X, but Y` contrast frame and the `it isn't X, it's Y` flip
+- rhetorical-question openers
+- em dashes well past normal density
+- emoji in prose
+- runs of `**Term:** explanation` bullets
+- sentence lengths with almost no variation
 
-Point unslop at this file and it flags plenty, because the section above quotes the exact words and phrases it hunts for, and one example pipes in "let's dive into it." It can't tell a quote from the real thing. This is the one file where the false alarms are the point.
+Each hit has a weight, the weights are summed, and the total is scaled per 1,000 words. Under 10 usually reads fine. From 10 to 25 the text deserves a second pass, and past 25 it needs rewriting rather than word swaps. The cutoffs are judgment calls, not measurements; if they fight your material, move `--threshold`.
 
-## Not a language cop
+## Limitations
 
-The word lists are opinions, not law. If your field really does use "robust" or "comprehensive" as terms of art, lean on `--threshold` or just your own eyes. The point is to catch the reflex version of these words, the ones you reached for without thinking, not to ban them.
+- It matches surface patterns, not intent. A document that quotes slop in running prose gets flagged for it, quotation marks or not. Code formatting is the only escape hatch it understands.
+- The lists are one person's opinion about English tech writing, and they only cover English. If `robust` is a term of art in your field, edit the list or raise the threshold.
+- A clean score doesn't mean the writing is good, and it doesn't prove a human wrote it. It means none of these particular tells showed up. A careful writer can trip it, and lazy slop can slip past it.
 
 ## License
 
-MIT. Do what you want with it.
+MIT.
