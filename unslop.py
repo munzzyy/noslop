@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """unslop - flag the AI tells in a piece of writing.
 
-Reads text from a file argument or stdin and prints the patterns that make prose
+Reads text from file arguments or stdin and prints the patterns that make prose
 read as LLM-generated: filler phrases, overused buzzwords, the "not just X, but Y"
 frame, em-dash spray, emoji, and suspiciously even sentence rhythm. It does NOT
 rewrite anything - that's your job. It just shows you where to look.
@@ -9,24 +9,25 @@ rewrite anything - that's your job. It just shows you where to look.
 Standard library only. No network, no dependencies.
 
 Usage:
-  unslop path/to/text.md
+  unslop draft.md
+  unslop docs/*.md
   echo "some text here" | unslop
-  unslop --json path/to/text.md      # machine-readable
-  unslop --quiet path/to/text.md     # verdict line only
+  unslop --json draft.md       # machine-readable
+  unslop --quiet draft.md      # verdict line only
 
-Exit code is 0 when the text reads human enough, 1 when it needs a pass -
-so you can drop it into a pre-commit hook or CI.
+Exit code is 0 when every input reads human enough, 1 when something needs
+a pass - so it drops into a pre-commit hook or CI.
 """
 import sys
 import re
 import json
 import argparse
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # Words that show up far more in LLM prose than in how people actually write.
 BUZZWORDS = [
-    "delve", "delved", "delving", "tapestry", "testament", "realm", "realms",
+    "delve", "delved", "delves", "delving", "tapestry", "testament", "realm", "realms",
     "landscape", "navigate", "navigating", "robust", "seamless", "seamlessly",
     "leverage", "leveraging", "leverages", "underscore", "underscores",
     "underscoring", "pivotal", "crucial", "comprehensive", "intricate",
@@ -74,18 +75,51 @@ PATTERNS = [
      "too many hedges reads evasive - commit or cut"),
 ]
 
-# Real emoji + the decorative dingbats used as slop. Deliberately does NOT
-# include plain glyphs that belong in technical prose: check/cross marks
-# (U+2713 U+2717), arrows (U+2192...), bullets, box-drawing, etc.
-_BMP_EMOJI = "✅❌✨⭐⭕❗⚡❤⬆\U0001F004"
-EMOJI = re.compile("[\U0001F300-\U0001FAFF\U0001F1E6-\U0001F1FF" + _BMP_EMOJI + "️]")
+# Real emoji + the decorative dingbats used as slop. Plain glyphs that belong
+# in technical prose - check/cross marks (U+2713 U+2717), bare arrows, bullets,
+# box-drawing - are not matched unless a variation selector (U+FE0F) forces
+# them into emoji presentation. A base + U+FE0F sequence counts once, not
+# twice, and a flag (two regional indicators) counts once.
+_BMP_EMOJI = "✅❌✨⭐⭕❗⚡❤⬆\U0001f004"
+EMOJI = re.compile(
+    "[\U0001f1e6-\U0001f1ff]{2}"
+    "|[\U0001f300-\U0001faff" + _BMP_EMOJI + "]\\ufe0f?"
+    "|[\\u2190-\\u2bff]\\ufe0f"
+)
 
 
-def load_text(path):
+def load_text(path, force_markdown=False):
     if path and path != "-":
         with open(path, "r", encoding="utf-8", errors="replace") as fh:
-            return fh.read()
-    return sys.stdin.read()
+            text = fh.read()
+        is_markdown = path.lower().endswith((".md", ".markdown"))
+    else:
+        text = sys.stdin.read()
+        is_markdown = False
+    if force_markdown or is_markdown:
+        text = strip_markdown_code(text)
+    return text
+
+
+def strip_markdown_code(text):
+    """Blank out fenced code blocks and inline code so quoted code isn't
+    scored as prose. Line numbers are preserved: every input line maps to an
+    output line, code lines just come back empty."""
+    out, fence = [], None
+    for line in text.split("\n"):
+        stripped = line.lstrip()
+        if fence is not None:
+            if stripped.startswith(fence):
+                fence = None
+            out.append("")
+            continue
+        opener = re.match(r"(`{3,}|~{3,})", stripped)
+        if opener:
+            fence = opener.group(1)
+            out.append("")
+            continue
+        out.append(re.sub(r"`[^`\n]*`", lambda m: " " * len(m.group()), line))
+    return "\n".join(out)
 
 
 def find_all(text_lower, needle):
@@ -109,23 +143,39 @@ def analyze(text):
     wc = max(len(words), 1)
     per1k = lambda n: round(n * 1000.0 / wc, 1)
 
-    buzz = []
+    # Collect buzzword and phrase hits as spans, then keep the longest
+    # non-overlapping ones, so "let's dive into" is one hit rather than
+    # "let's dive" plus "dive into", and "rich tapestry" doesn't also
+    # count as "tapestry".
+    spans = []
     for w in BUZZWORDS:
         if " " in w or "-" in w:
-            hits = find_all(lower, w)
+            starts = find_all(lower, w)
         else:
-            hits = [m.start() for m in re.finditer(r"\b" + re.escape(w) + r"\b", lower)]
-        if hits:
-            buzz.append((w, len(hits), [line_of(text, h) for h in hits[:5]]))
-    buzz.sort(key=lambda x: -x[1])
-    buzz_total = sum(n for _, n, _ in buzz)
-
-    phr = []
+            starts = [m.start() for m in re.finditer(r"\b" + re.escape(w) + r"\b", lower)]
+        spans += [(s, s + len(w), "buzz", w) for s in starts]
     for p in PHRASES:
-        hits = find_all(lower, p)
-        if hits:
-            phr.append((p, len(hits), [line_of(text, h) for h in hits[:5]]))
-    phr.sort(key=lambda x: -x[1])
+        spans += [(s, s + len(p), "phrase", p) for s in find_all(lower, p)]
+    spans.sort(key=lambda h: (h[0], -h[1]))
+    kept, last_end = [], -1
+    for s, e, kind, key in spans:
+        if s >= last_end:
+            kept.append((s, kind, key))
+            last_end = e
+
+    def tally(which):
+        counts = {}
+        for s, kind, key in kept:
+            if kind == which:
+                counts.setdefault(key, []).append(s)
+        rows = [(key, len(starts), [line_of(text, s) for s in starts[:5]])
+                for key, starts in counts.items()]
+        rows.sort(key=lambda x: -x[1])
+        return rows
+
+    buzz = tally("buzz")
+    phr = tally("phrase")
+    buzz_total = sum(n for _, n, _ in buzz)
     phr_total = sum(n for _, n, _ in phr)
 
     pat = []
@@ -212,17 +262,41 @@ def report(r, quiet=False):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="unslop", description="Flag the AI tells in a piece of writing.")
-    ap.add_argument("path", nargs="?", default="-", help="text file, or - for stdin")
+    ap.add_argument("paths", nargs="*", default=["-"], metavar="path",
+                    help="text files, or - for stdin (default: stdin)")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--quiet", action="store_true", help="verdict line only")
+    ap.add_argument("--markdown", action="store_true",
+                    help="skip fenced/inline code when scoring (automatic for .md files)")
     ap.add_argument("--threshold", type=float, default=10.0,
                     help="score at/above which exit code is 1 (default 10)")
     ap.add_argument("--version", action="version", version=f"unslop {__version__}")
     args = ap.parse_args(argv)
 
-    r = analyze(load_text(args.path))
-    print(json.dumps(r, indent=2) if args.json else report(r, quiet=args.quiet))
-    return 0 if r["score_per_1k"] < args.threshold else 1
+    paths = args.paths or ["-"]
+    results = []
+    for p in paths:
+        r = analyze(load_text(p, force_markdown=args.markdown))
+        if p != "-":
+            r["path"] = p
+        results.append((p, r))
+
+    if args.json:
+        payload = results[0][1] if len(results) == 1 else [r for _, r in results]
+        print(json.dumps(payload, indent=2))
+    else:
+        multi = len(results) > 1
+        blocks = []
+        for p, r in results:
+            body = report(r, quiet=args.quiet)
+            if multi and args.quiet:
+                blocks.append(f"{p}: {body}")
+            elif multi:
+                blocks.append(f"== {p} ==\n{body}")
+            else:
+                blocks.append(body)
+        print("\n".join(blocks) if (multi and args.quiet) else "\n\n".join(blocks))
+    return 0 if all(r["score_per_1k"] < args.threshold for _, r in results) else 1
 
 
 if __name__ == "__main__":
