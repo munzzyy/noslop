@@ -2,6 +2,7 @@ import contextlib
 import io
 import json
 import os
+import sys
 import tempfile
 
 import unslop
@@ -12,6 +13,13 @@ def run_cli(argv):
     with contextlib.redirect_stdout(buf):
         code = unslop.main(argv)
     return code, buf.getvalue()
+
+
+def run_cli_err(argv):
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = unslop.main(argv)
+    return code, out.getvalue(), err.getvalue()
 
 
 def test_ai_sample_flags_high():
@@ -162,3 +170,115 @@ def test_threshold_flag():
         lax, _ = run_cli([p, "--threshold", "200"])
         assert strict == 1
         assert lax == 0
+
+
+def test_word_boundary_avoids_substring_false_positives():
+    # "as an ai" must not match inside "aide", "deep dive" must not match
+    # inside "deep diver" - raw substring matching used to flag both
+    r = unslop.analyze("He served as an aide to the senator for six years.")
+    assert r["phrases"] == []
+    assert r["verdict"] == "looks human"
+    r = unslop.analyze("A deep diver explores caves most people never see.")
+    assert r["buzzwords"] == []
+
+
+def test_wrapped_phrase_is_still_caught():
+    # git wraps commit bodies around 72 cols, so a phrase can be split
+    # across a hard-wrapped line and should still be flagged
+    r = unslop.analyze("It is important to\nnote that this changes the default.")
+    assert any(p == "it is important to note" for p, _, _ in r["phrases"])
+
+
+def test_isnt_flip_does_not_match_possessive_its():
+    # "is not stored in its own file" is ordinary prose, not the
+    # "it isn't X, it's Y" contrast flip
+    r = unslop.analyze("The config is not stored in its own file anymore, it "
+                        "moved to environment variables during setup.")
+    assert r["patterns"] == []
+    assert r["verdict"] == "looks human"
+
+
+def test_isnt_flip_still_fires_on_real_contrast():
+    r = unslop.analyze("This isn't a gimmick, it's the core feature of the release.")
+    labels = [p[0] for p in r["patterns"]]
+    assert any("it isn't X" in label for label in labels)
+    r = unslop.analyze("This isn't a gimmick, it is the core feature of the release.")
+    labels = [p[0] for p in r["patterns"]]
+    assert any("it isn't X" in label for label in labels)
+
+
+def test_numbered_bold_label_bullets_are_flagged():
+    # the numbered "1. **Term:** ..." list is the same formatting tell as
+    # the dash-bulleted one and should be caught the same way
+    text = "1. **Speed:** fast\n2. **Safety:** safe\n3. **Scale:** grows\n4. **Cost:** cheap\n"
+    r = unslop.analyze(text)
+    assert r["bold_label_bullets"] == 4
+    assert r["score_per_1k"] > 0
+
+
+def test_stdin_decodes_as_utf8_regardless_of_console_encoding():
+    # on a default Windows console sys.stdin decodes as cp1252, which
+    # mangles UTF-8 em dashes and emoji into bytes nothing matches
+    utf8_bytes = "an em dash — right here and a party \U0001f389 too".encode("utf-8")
+    fake_stdin = io.TextIOWrapper(io.BytesIO(utf8_bytes), encoding="cp1252")
+    old_stdin = sys.stdin
+    sys.stdin = fake_stdin
+    try:
+        text = unslop.load_text("-")
+    finally:
+        sys.stdin = old_stdin
+    r = unslop.analyze(text)
+    assert r["em_dashes"] == 1
+    assert r["emoji"] == 1
+
+
+def test_stdin_without_buffer_falls_back_to_text_read():
+    # a plain io.StringIO (as used in some test harnesses) has no .buffer
+    old_stdin = sys.stdin
+    sys.stdin = io.StringIO("plain text with no special encoding needs")
+    try:
+        text = unslop.load_text("-")
+    finally:
+        sys.stdin = old_stdin
+    assert text == "plain text with no special encoding needs"
+
+
+def test_utf8_bom_file_does_not_break_fence_detection():
+    # a UTF-8 BOM glued to the opening fence used to stop the fence regex
+    # from matching, so the whole code block got scored as prose
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "doc.md")
+        with open(p, "wb") as fh:
+            fh.write(b"\xef\xbb\xbf```\nwe delve into the robust tapestry\n```\n")
+        code, out = run_cli([p])
+        assert code == 0
+        assert "delve" not in out
+
+
+def test_missing_file_exits_cleanly_with_no_traceback():
+    code, out, err = run_cli_err(["does-not-exist-at-all.txt"])
+    assert code == 2
+    assert out == ""
+    assert "does-not-exist-at-all.txt" in err
+
+
+def test_glob_argument_is_expanded():
+    # PowerShell and cmd.exe never expand wildcards, so "unslop docs/*.md"
+    # needs to work even when the shell hands us the literal glob
+    with tempfile.TemporaryDirectory() as d:
+        a = os.path.join(d, "a.md")
+        b = os.path.join(d, "b.md")
+        for p in (a, b):
+            with open(p, "w", encoding="utf-8") as fh:
+                fh.write("Short and plain. Nothing fancy going on in this one.")
+        code, out = run_cli([os.path.join(d, "*.md")])
+        assert code == 0
+        assert "a.md" in out and "b.md" in out
+
+
+def test_glob_argument_matching_nothing_errors_cleanly():
+    with tempfile.TemporaryDirectory() as d:
+        code, out, err = run_cli_err([os.path.join(d, "*.md")])
+        assert code == 2
+        assert out == ""
+        assert "no files match" in err

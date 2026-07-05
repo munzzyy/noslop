@@ -16,11 +16,13 @@ Usage:
   unslop --quiet draft.md      # verdict line only
 
 Exit code is 0 when every input reads human enough, 1 when something needs
-a pass - so it drops into a pre-commit hook or CI.
+a pass, and 2 if a path couldn't be read at all - so a crash and a lint
+finding never look the same to a script.
 """
 import sys
 import re
 import json
+import glob
 import argparse
 
 __version__ = "0.2.0"
@@ -65,7 +67,7 @@ PATTERNS = [
      r"\bnot (?:just|only)\b[^.?!\n]{1,70}?\bbut\b", 3,
      "state it plainly instead of the contrast frame"),
     ("'it isn't X, it's Y' flip",
-     r"\bis(?:n't| not)\b[^.?!\n]{1,45}?\bit'?s\b", 2,
+     r"\bis(?:n't| not)\b[^.?!\n]{1,45}?\bit(?:'s| is)\b", 2,
      "just say what it is"),
     ("rhetorical question opener",
      r"(?im)^\s*(?:ever wondered|have you ever|what if|imagine (?:a|if|that)|picture this)\b", 2,
@@ -90,12 +92,24 @@ EMOJI = re.compile(
 
 def load_text(path, force_markdown=False):
     if path and path != "-":
-        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as fh:
             text = fh.read()
         is_markdown = path.lower().endswith((".md", ".markdown"))
     else:
-        text = sys.stdin.read()
+        # sys.stdin decodes with the console's locale encoding (cp1252 on a
+        # default Windows setup), which mangles UTF-8 em dashes, emoji, and
+        # curly quotes into bytes no detector matches. Read the raw bytes
+        # and decode as UTF-8 ourselves, same as the file path above. Fall
+        # back to sys.stdin.read() for stand-ins like io.StringIO in tests
+        # that have no underlying .buffer.
+        buf = getattr(sys.stdin, "buffer", None)
+        if buf is not None:
+            text = buf.read().decode("utf-8-sig", errors="replace")
+        else:
+            text = sys.stdin.read()
         is_markdown = False
+    if text.startswith("﻿"):
+        text = text[1:]
     if force_markdown or is_markdown:
         text = strip_markdown_code(text)
     return text
@@ -123,14 +137,14 @@ def strip_markdown_code(text):
 
 
 def find_all(text_lower, needle):
-    start, hits = 0, []
-    while True:
-        i = text_lower.find(needle, start)
-        if i < 0:
-            break
-        hits.append(i)
-        start = i + len(needle)
-    return hits
+    """Word-boundary match for a buzzword or phrase, tolerant of the line
+    wraps git and editors put in the middle of a phrase. "as an ai" won't
+    match inside "aide", "deep dive" won't match inside "deep diver", and
+    a phrase split across a hard-wrapped line ("it's important to\\nnote")
+    is still found. Returns (start, end) spans rather than just starts,
+    since a wrapped match can be longer than the needle itself."""
+    pattern = r"\b" + re.escape(needle).replace(r"\ ", r"\s+") + r"\b"
+    return [(m.start(), m.end()) for m in re.finditer(pattern, text_lower)]
 
 
 def line_of(text, idx):
@@ -149,13 +163,9 @@ def analyze(text):
     # count as "tapestry".
     spans = []
     for w in BUZZWORDS:
-        if " " in w or "-" in w:
-            starts = find_all(lower, w)
-        else:
-            starts = [m.start() for m in re.finditer(r"\b" + re.escape(w) + r"\b", lower)]
-        spans += [(s, s + len(w), "buzz", w) for s in starts]
+        spans += [(s, e, "buzz", w) for s, e in find_all(lower, w)]
     for p in PHRASES:
-        spans += [(s, s + len(p), "phrase", p) for s in find_all(lower, p)]
+        spans += [(s, e, "phrase", p) for s, e in find_all(lower, p)]
     spans.sort(key=lambda h: (h[0], -h[1]))
     kept, last_end = [], -1
     for s, e, kind, key in spans:
@@ -202,8 +212,10 @@ def analyze(text):
     emdash_excess = max(0, emdash - max(2, wc // 90))
     raw += emdash_excess
     raw += emoji * 2
-    # repeated "**Term:** explanation" bullets - a formatting tell
-    bold_bullets = len(re.findall(r"(?m)^\s*[-*+]\s+\*\*[^*\n]{1,45}?(?::\*\*|\*\*:)", text))
+    # repeated "**Term:** explanation" bullets - a formatting tell, whether
+    # the list uses dash/star markers or is numbered ("1. **Term:** ...")
+    bold_bullets = len(re.findall(
+        r"(?m)^\s*(?:[-*+]|\d{1,3}[.)])\s+\*\*[^*\n]{1,45}?(?::\*\*|\*\*:)", text))
     if bold_bullets >= 3:
         raw += (bold_bullets - 2) * 2
     score = per1k(raw)
@@ -273,10 +285,29 @@ def main(argv=None):
     ap.add_argument("--version", action="version", version=f"unslop {__version__}")
     args = ap.parse_args(argv)
 
-    paths = args.paths or ["-"]
+    # Expand any glob argument ourselves. POSIX shells already do this
+    # before we see argv, but PowerShell and cmd.exe never expand
+    # wildcards, so "unslop docs/*.md" would otherwise reach open() as a
+    # literal, nonexistent path on Windows.
+    paths = []
+    for p in (args.paths or ["-"]):
+        if p != "-" and any(ch in p for ch in "*?["):
+            matches = sorted(glob.glob(p))
+            if not matches:
+                print(f"unslop: {p}: no files match", file=sys.stderr)
+                return 2
+            paths.extend(matches)
+        else:
+            paths.append(p)
+
     results = []
     for p in paths:
-        r = analyze(load_text(p, force_markdown=args.markdown))
+        try:
+            text = load_text(p, force_markdown=args.markdown)
+        except OSError as exc:
+            print(f"unslop: {p}: {exc.strerror or exc}", file=sys.stderr)
+            return 2
+        r = analyze(text)
         if p != "-":
             r["path"] = p
         results.append((p, r))
