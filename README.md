@@ -1,8 +1,18 @@
 # unslop
 
-A command-line linter for prose. It flags the patterns that make writing sound like a chatbot: stock phrases, overused buzzwords, the `not just X, but Y` frame, em-dash pileups, emoji, sentences that all run the same length. You get a list of what it found, where it is, and a score. Fixing the text is up to you.
+**See what makes your writing sound like a robot, then fix it before you hit send.** unslop flags the patterns that read as chatbot prose: stock phrases, overused buzzwords, the `not just X, but Y` frame, em-dash pileups, emoji, sentences that all run the same length. It shows you what it found and where, and gives you a score. Fixing the words is your job.
 
-One Python file, standard library only. Runs locally, deterministically, no network access - nothing you feed it ever leaves your machine.
+**[Try it in your browser](https://munzzyy.github.io/unslop/).** Paste a draft and watch the tells light up. It all runs client-side, so nothing you paste is uploaded, stored, or sent anywhere.
+
+[![unslop analyzing a slop-heavy paragraph, every AI tell underlined in place](docs/media/app-dark.png)](https://munzzyy.github.io/unslop/)
+
+Prefer the terminal? It's also one Python file with no dependencies that drops into a pre-commit hook or CI. Same scoring engine either way, and either way it runs locally and deterministically with no network access.
+
+## In your browser
+
+[munzzyy.github.io/unslop](https://munzzyy.github.io/unslop/) is the whole tool as a single page. Paste or type, and every buzzword, filler phrase, construction, stray em dash, and emoji gets underlined in place, with a live score and a breakdown of exactly what tripped it. No build step, no account, no server: the page loads the same scorer the CLI uses and runs it on your machine. You can save the page and use it offline.
+
+[![the light theme, showing the score and the per-finding breakdown](docs/media/app-full-light.png)](https://munzzyy.github.io/unslop/)
 
 > Looking for a package literally named `unslop` on PyPI or npm? Those are different projects - an LLM-based rewriter and an old code-quality tool. This one's git-only for now; see [Install](#install).
 
@@ -92,7 +102,7 @@ With [pre-commit](https://pre-commit.com):
 ```yaml
 repos:
   - repo: https://github.com/munzzyy/unslop
-    rev: v0.2.1
+    rev: v0.3.0
     hooks:
       - id: unslop
 ```
@@ -102,7 +112,7 @@ That runs on the markdown, text, and rst files in each commit.
 As a GitHub Action, no pre-commit framework required:
 
 ```yaml
-- uses: munzzyy/unslop@v0.2.1
+- uses: munzzyy/unslop@v0.3.0
   with:
     paths: "docs/*.md README.md"
 ```
@@ -148,4 +158,4 @@ Bug reports, false positives, and new buzzwords/phrases are all welcome. See [CO
 
 ## License
 
-MIT.
+[Prosperity Public License 3.0.0](LICENSE). Free for noncommercial use: personal projects, hobby work, research, education, nonprofits, and government all qualify. Commercial use gets a thirty-day trial, and past that it needs a paid license. To sort one out, open an issue or email Munzzyy5@proton.me.

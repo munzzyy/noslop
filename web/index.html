@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>unslop — flag the AI tells in your writing</title>
+<meta name="description" content="Paste your writing and see what makes it read like a robot, so you can fix it before you send it. Runs entirely in your browser — nothing is uploaded." />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<a class="skip-link" href="#editor-textarea">Skip to editor</a>
+
+<div class="page">
+
+  <header class="site-header">
+    <div class="header-row">
+      <span class="brand">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <rect width="64" height="64" rx="14" fill="#20211f"/>
+          <path d="M18 22 L18 40 Q18 46 24 46 Q30 46 30 40 L30 22" fill="none" stroke="#f2ede3" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M36 46 L46 22" fill="none" stroke="#c8632f" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+        unslop
+      </span>
+      <div class="header-actions">
+        <button type="button" class="icon-button" id="theme-toggle" aria-pressed="false">
+          <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>
+          </svg>
+          <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"/>
+          </svg>
+          <span class="sr-only" id="theme-toggle-label">Switch to dark theme</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero">
+      <h1>See what makes your writing sound like a robot.</h1>
+      <p class="tagline">Paste a draft below. unslop points at the exact words and habits that give it away, so you can fix them before you hit send.</p>
+      <p class="privacy-line">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3l7 3.2v5.1c0 4.6-3 8.9-7 10.2-4-1.3-7-4.6-7-10.2V6.2L12 3Z"/>
+          <path d="M9 12.2l2.1 2.1L15.5 10"/>
+        </svg>
+        <span><strong>Everything runs in your browser.</strong> Nothing you paste is uploaded, stored, or sent anywhere.</span>
+      </p>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="toolbar" role="toolbar" aria-label="Editor actions">
+      <button type="button" class="btn btn-primary" id="btn-sample-heavy">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.4 6.9 7.1.2-5.7 4.4 2.1 7-5.9-4.3-5.9 4.3 2.1-7-5.7-4.4 7.1-.2z"/></svg>
+        Try a heavy-slop sample
+      </button>
+      <button type="button" class="btn" id="btn-sample-subtle">Try a subtle sample</button>
+      <button type="button" class="btn btn-ghost" id="btn-clear">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.8c0-.4.4-.8.8-.8h4.4c.4 0 .8.4.8.8V7M6 7l1 12.2c0 1 .8 1.8 1.8 1.8h6.4c1 0 1.8-.8 1.8-1.8L18 7"/></svg>
+        Clear
+      </button>
+      <button type="button" class="btn btn-ghost" id="btn-copy">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        Copy text
+      </button>
+      <span class="toolbar-spacer"></span>
+      <span class="word-count" id="word-count" aria-hidden="true">0 words</span>
+    </div>
+
+    <div class="editor-shell">
+      <div class="editor-frame">
+        <div class="editor-surface editor-backdrop" id="editor-backdrop" aria-hidden="true"></div>
+        <label for="editor-textarea" class="sr-only">Your writing — paste or type here to check it for AI tells</label>
+        <textarea
+          id="editor-textarea"
+          class="editor-surface editor-textarea"
+          spellcheck="true"
+          autocapitalize="sentences"
+          placeholder="Paste or type your writing here..."
+        ></textarea>
+      </div>
+      <div class="editor-footer-hint">
+        <span>Marks show what unslop flagged. Hover or tab to a mark for details.</span>
+        <span><kbd>Tab</kbd> into the text, then <kbd>Tab</kbd> through marks</span>
+      </div>
+    </div>
+
+    <section class="results-grid" aria-label="Results">
+      <div class="score-card" id="score-card" data-verdict="good">
+        <p class="score-eyebrow">AI-tell score</p>
+        <p class="score-number" aria-hidden="true"><span id="score-number">0.0</span><span class="unit">/1k words</span></p>
+        <p class="score-verdict" id="score-verdict-pill" aria-hidden="true">
+          <svg id="verdict-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 12.5l5 5L20 6.5"/>
+          </svg>
+          <span id="verdict-text">looks human</span>
+        </p>
+        <p class="sr-only" role="status" aria-live="polite" id="score-live"></p>
+        <div class="score-meta">
+          <div class="score-meta-row"><span>Words</span><span id="meta-words">0</span></div>
+          <div class="score-meta-row"><span>Em dashes</span><span id="meta-emdash">0</span></div>
+          <div class="score-meta-row"><span>Emoji</span><span id="meta-emoji">0</span></div>
+          <div class="score-meta-row"><span>Sentence rhythm</span><span id="meta-rhythm">—</span></div>
+        </div>
+      </div>
+
+      <div class="breakdown" id="breakdown">
+        <h2>Breakdown</h2>
+        <div id="breakdown-body">
+          <!-- populated by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <details class="explainer" id="explainer">
+      <summary>
+        What it checks
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="explainer-body">
+        <dl>
+          <dt><span class="swatch swatch-buzzword" aria-hidden="true"></span>Buzzwords</dt>
+          <dd>Certain words show up in machine writing at a rate way past normal speech. One on its own means nothing. A cluster of them in one paragraph is the tell.</dd>
+
+          <dt><span class="swatch swatch-phrase" aria-hidden="true"></span>Filler phrases</dt>
+          <dd>Stock openers and closers a model falls back on: a throat-clearing lead-in, a chipper offer to help at the end, an announcement before diving into the topic. They pad the word count without adding anything.</dd>
+
+          <dt><span class="swatch swatch-construction" aria-hidden="true"></span>Constructions</dt>
+          <dd>Sentence shapes, not single words: setting up a contrast between two things just to land on the second one, restating a fact by first denying its opposite, and opening with a question purely as a hook instead of getting to the point.</dd>
+
+          <dt><span class="swatch swatch-hedge" aria-hidden="true"></span>Hedges</dt>
+          <dd>Words like <em>can</em>, <em>often</em>, and <em>typically</em>, stacked up in one stretch of text. Not scored on its own, but worth a look. Too many hedges in a row reads evasive.</dd>
+
+          <dt><span class="swatch swatch-emdash" aria-hidden="true"></span>Em dashes</dt>
+          <dd>An occasional dash is normal punctuation. A pileup of them, one in nearly every sentence, is a habit worth breaking.</dd>
+
+          <dt><span class="swatch swatch-emoji" aria-hidden="true"></span>Emoji in prose</dt>
+          <dd>Fine in a text message, out of place in a report, a README, or a cover letter.</dd>
+
+          <dt><span class="swatch swatch-bold-bullet" aria-hidden="true"></span>Bold-label bullets</dt>
+          <dd>A long run of bullets that all follow the same shape: a bolded word, a colon, then a short explanation. One or two is a normal list. Four or five in a row is a template.</dd>
+
+          <dt>Sentence rhythm</dt>
+          <dd>Real writing varies its sentence length without trying to. When every sentence lands within a word or two of the same length, that evenness is its own tell.</dd>
+        </dl>
+      </div>
+    </details>
+  </main>
+
+  <footer class="site-footer">
+    <span>
+      Free for noncommercial use; commercial use needs a license.
+      <a href="https://github.com/munzzyy/unslop" target="_blank" rel="noopener noreferrer">Source on GitHub</a>.
+      Prefer the terminal? <code>pipx install git+https://github.com/munzzyy/unslop</code> drops into pre-commit or CI &mdash; same scoring engine as this page.
+    </span>
+    <span class="footer-links">
+      <a href="https://github.com/munzzyy/unslop" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://github.com/munzzyy/unslop/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+    </span>
+  </footer>
+
+</div>
+
+<div class="mark-tooltip" id="mark-tooltip" role="tooltip"></div>
+
+<script src="detector.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

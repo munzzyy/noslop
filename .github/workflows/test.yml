@@ -22,3 +22,18 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install pytest
       - run: python -m pytest tests/ -q
+
+  # The browser UI (web/) ships its own copy of the scorer in web/detector.js.
+  # This proves it stays byte-for-byte in agreement with unslop.py, so the web
+  # app can never quietly disagree with the CLI.
+  web-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node web/parity.js

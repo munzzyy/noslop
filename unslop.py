@@ -27,7 +27,7 @@ import os
 import fnmatch
 import argparse
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 # analyze()'s return dict is unslop's only machine-readable contract. If you
 # add, rename, or remove a top-level key, update this set and bump the

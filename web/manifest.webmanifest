@@ -1,0 +1,19 @@
+{
+  "name": "unslop — flag the AI tells in your writing",
+  "short_name": "unslop",
+  "description": "Paste your writing and see what makes it read like a robot, so you can fix it before you send it. Runs entirely in your browser.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4efe6",
+  "theme_color": "#20211f",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

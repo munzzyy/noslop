@@ -49,6 +49,10 @@ python unslop.py --json some-file.md
   - `BUZZWORDS` - single words and short fixed phrases
   - `PHRASES` - whole-phrase tics, matched case-insensitively
   - `PATTERNS` - regex-based constructions with a label, weight, and hint
+- The browser build in `web/` ships its own copy of the scorer as
+  `web/detector.js`. If you change a list or the scoring math in `unslop.py`,
+  update `web/detector.js` to match; `node web/parity.js` (and CI) checks that
+  the two agree on a batch of fixtures.
 - Add a test in `tests/test_unslop.py` for anything you change. Tests call
   `unslop.analyze()` directly on a text string in most cases, look at the
   existing tests for the pattern, it's usually a 3-4 line addition.
@@ -79,6 +83,15 @@ python unslop.py --json some-file.md
 
 Use the issue templates, they ask for the couple of details that make a
 report actionable (exact input, exact output, what you expected).
+
+## License of contributions
+
+unslop is under the [Prosperity Public License](LICENSE): free for noncommercial
+use, commercial use by paid license. So the project stays maintainable under one
+owner, contributions are taken under the [Blue Oak Model License 1.0.0](https://blueoakcouncil.org/license/1.0.0),
+a simple permissive license. Opening a PR means you're offering your change under
+those terms. Prosperity's own "Contributions Back" clause is written for exactly
+this, so sending a fix back never counts as commercial use on your end.
 
 ## Security issues
 
