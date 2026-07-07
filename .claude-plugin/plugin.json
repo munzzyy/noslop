@@ -1,7 +1,7 @@
 {
   "name": "unslop",
   "description": "Flag the AI tells in a piece of writing before you ship it. Stdlib Python, no network access.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": {
     "name": "Munzzyy"
   },
