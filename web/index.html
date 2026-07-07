@@ -7,6 +7,19 @@
 <meta name="description" content="Paste your writing and see what makes it read like a robot, so you can fix it before you send it. Runs entirely in your browser — nothing is uploaded." />
 <meta name="color-scheme" content="light dark" />
 <meta name="theme-color" content="#f4efe6" id="theme-color-meta" />
+<script>
+// Applies a saved theme before first paint so returning visitors don't see
+// the default flash in first. Keep the id list in sync with THEMES in app.js.
+(function () {
+  try {
+    var t = localStorage.getItem("unslop:theme");
+    if (["light", "dark", "terminal", "sepia", "newsprint", "midnight",
+         "solarized-light", "solarized-dark", "contrast"].indexOf(t) !== -1) {
+      document.documentElement.setAttribute("data-theme", t);
+    }
+  } catch (_e) {}
+})();
+</script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="stylesheet" href="styles.css" />
