@@ -1,0 +1,117 @@
+// Romanian (ro). Same key set as en.js - see web/i18n/en.js for the rules
+// (do-not-translate list, {placeholder} discipline, plural categories).
+// Plural categories used here: one, few, other (verified via
+// Intl.PluralRules("ro").resolvedOptions().pluralCategories - one=1,
+// few=0 and 2-19, other=20+). Romanian's "de" insertion before the noun at
+// 20+ is written directly into the "other" strings below (e.g. "{count} de
+// cuvinte"), not left for the runtime to add.
+
+window.UnslopI18N = window.UnslopI18N || {};
+window.UnslopI18N.catalogs = window.UnslopI18N.catalogs || {};
+window.UnslopI18N.catalogs.ro = {
+  "meta.title": "unslop — găsește ce trădează AI-ul în textul tău",
+  "meta.description": "Lipește textul și vezi ce îl face să sune ca un robot, ca să-l corectezi înainte să-l trimiți. Totul rulează în browser — nimic nu se încarcă nicăieri.",
+
+  "skipToEditor": "Sari la editor",
+  "theme.switcherLabel": "Temă",
+  "theme.auto": "Automat",
+  "uilang.switcherLabel": "Limbă",
+
+  "hero.heading": "Vezi ce face textul tău să sune ca un robot.",
+  "hero.tagline": "Lipește o ciornă mai jos. unslop arată exact cuvintele și obiceiurile care îl trădează, ca să le corectezi înainte să-l trimiți.",
+  "privacy.strong": "Totul rulează în browserul tău.",
+  "privacy.rest": "Nimic din ce lipești nu este încărcat, salvat sau trimis nicăieri.",
+
+  "toolbar.ariaLabel": "Acțiuni ale editorului",
+  "toolbar.sampleHeavy": "Încearcă un exemplu puternic artificial",
+  "toolbar.sampleSubtle": "Încearcă un exemplu subtil",
+  "toolbar.sampleSpanish": "Încearcă un exemplu în spaniolă",
+  "toolbar.clear": "Șterge",
+  "toolbar.copy": "Copiază textul",
+  "toolbar.copied": "Copiat",
+  "toolbar.wordCount.one": "{count} cuvânt",
+  "toolbar.wordCount.few": "{count} cuvinte",
+  "toolbar.wordCount.other": "{count} de cuvinte",
+
+  "textlang.selectLabel": "Verifică textul ca",
+  "textlang.autoOption": "Automat",
+  "textlang.autoDetected": "Automat — detectat: {name}",
+  "textlang.autoFallback": "Automat — nicio potrivire",
+  "textlang.fallbackHint": "Niciun pachet de limbă nu s-a potrivit cu acest text. Au rulat doar verificările structurale și listele în engleză.",
+
+  "editor.textareaLabel": "Textul tău — lipește sau scrie aici ca să verifici dacă sună ca un AI",
+  "editor.placeholder": "Lipește sau scrie textul tău aici...",
+  "editor.hintMarks": "Marcajele arată ce a găsit unslop. Treci cu mouse-ul sau ajungi cu Tab la un marcaj pentru detalii.",
+  "editor.hintTabbing": "Apasă {tab} ca să intri în text, apoi din nou {tab} ca să te deplasezi între marcaje.",
+
+  "results.ariaLabel": "Rezultate",
+  "score.eyebrow": "Scor AI",
+  "score.unit": "/1000 de cuvinte",
+  "score.meta.words": "Cuvinte",
+  "score.meta.emdash": "Linii de pauză",
+  "score.meta.emoji": "Emoji",
+  "score.meta.rhythm": "Ritmul frazelor",
+  "score.rhythm.notEnough": "prea puține fraze",
+  "score.rhythm.evenSuffix": " (foarte uniform)",
+  "score.liveAnnouncement": "Scor {score} la o mie de cuvinte. {verdict}.",
+
+  "verdict.good": "sună uman",
+  "verdict.warn": "câteva semne de AI - merită o trecere în revistă",
+  "verdict.bad": "sună a AI - are nevoie de o rescriere adevărată",
+
+  "breakdown.heading": "Detaliere",
+  "category.phrase": "Frază de umplutură",
+  "category.buzzword": "Cuvânt la modă",
+  "category.construction": "Construcție",
+  "category.hedge": "Atenuare",
+  "category.emoji": "Emoji",
+  "category.emdash": "Linie de pauză",
+  "category.bold-bullet": "Marcator aldin",
+  "breakdown.section.buzzword": "Cuvinte la modă",
+  "breakdown.section.phrase": "Fraze de umplutură",
+  "breakdown.section.construction": "Construcții",
+  "breakdown.rhythmSurface": "Ritm și trăsături de suprafață",
+  "breakdown.clean.heading": "Se citește curat.",
+  "breakdown.clean.notEnoughText": "Încă e prea puțin text de evaluat. Lipește ceva mai mult pentru un rezultat de încredere.",
+  "breakdown.clean.noneFired": "Nicio verificare unslop nu s-a declanșat pe acest text.",
+  "finding.hitCount.one": "{count} dată",
+  "finding.hitCount.few": "{count} ori",
+  "finding.hitCount.other": "{count} de ori",
+  "finding.linesLabel": "linia {lines}",
+  "finding.styleNotScored": " (stil, nu contează la scor)",
+  "finding.fixPrefix": "Remediu: ",
+
+  "surface.emdashLabel": "linii de pauză",
+  "surface.emdashExcess": "linii de pauză ({excess} peste normal)",
+  "surface.emojiCount.one": "{count} emoji",
+  "surface.emojiCount.few": "{count} emoji",
+  "surface.emojiCount.other": "{count} de emoji",
+  "surface.boldBullet": "marcatori **aldini**",
+  "surface.boldBulletTemplateRun": " (pare un șablon)",
+  "surface.sentenceVariation": "variația lungimii frazelor",
+  "surface.suspiciouslyEven": " (suspect de uniform)",
+
+  "explainer.summary": "Ce verifică",
+  "explainer.buzzword.term": "Cuvinte la modă",
+  "explainer.buzzword.def": "Anumite cuvinte apar în textul scris de o mașină cu o frecvență mult peste vorbirea normală. Unul singur nu înseamnă nimic. Un grup de-al lor în același paragraf este semnul care le trădează.",
+  "explainer.phrase.term": "Fraze de umplutură",
+  "explainer.phrase.def": "Deschideri și încheieri standard pe care un model se bazează: o introducere care doar își dresează glasul, o ofertă veselă de ajutor la final, un anunț înainte să ajungă măcar la subiect. Umflă numărul de cuvinte fără să adauge nimic.",
+  "explainer.construction.term": "Construcții",
+  "explainer.construction.def": "Forme de frază, nu cuvinte izolate: construirea unui contrast între două lucruri doar ca să ajungă la al doilea, reafirmarea unui fapt negând mai întâi opusul lui și deschiderea cu o întrebare doar ca momeală, în loc să treacă direct la subiect.",
+  "explainer.hedge.term": "Atenuări",
+  "explainer.hedge.def": "Cuvinte ca poate, adesea și de obicei, îngrămădite în același fragment de text. Nu contează singure la scor, dar merită observate. Prea multe atenuări la rând sună evaziv.",
+  "explainer.emdash.term": "Linii de pauză",
+  "explainer.emdash.def": "O linie de pauză din când în când este punctuație normală. Una în aproape fiecare frază e un obicei care merită schimbat.",
+  "explainer.emoji.term": "Emoji în text",
+  "explainer.emoji.def": "Firesc într-un mesaj de chat, nepotrivit într-un raport, un README sau o scrisoare de intenție.",
+  "explainer.boldBullet.term": "Marcatori aldini",
+  "explainer.boldBullet.def": "Un șir lung de marcatori care urmează toți aceeași formă: un cuvânt aldin, două puncte, apoi o explicație scurtă. Unul sau două sunt o listă normală. Patru sau cinci la rând sunt un șablon.",
+  "explainer.rhythm.term": "Ritmul frazelor",
+  "explainer.rhythm.def": "Textul real variază lungimea frazelor fără să încerce. Când fiecare frază are aproape exact aceeași lungime, chiar acea uniformitate este semnul care trădează.",
+
+  "footer.license": "Gratuit pentru uz necomercial; uzul comercial necesită o licență.",
+  "footer.sourceLinkText": "Cod sursă pe GitHub",
+  "footer.cliPrefix": "Preferi terminalul? ",
+  "footer.cliSuffix": " se integrează în pre-commit sau CI, cu același motor de scor ca această pagină.",
+  "footer.licenseLinkText": "Licență",
+};

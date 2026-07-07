@@ -1,0 +1,112 @@
+// Persian (fa), RTL. Same key set as en.js - see web/i18n/en.js for the
+// rules (do-not-translate list, {placeholder} discipline, plural
+// categories). Plural categories used here: one, other (verified via
+// Intl.PluralRules("fa").resolvedOptions().pluralCategories).
+// dir="rtl" is applied automatically by i18n/registry.js's RTL_LOCALES set.
+
+window.UnslopI18N = window.UnslopI18N || {};
+window.UnslopI18N.catalogs = window.UnslopI18N.catalogs || {};
+window.UnslopI18N.catalogs.fa = {
+  "meta.title": "unslop — پیدا کن چه چیزی هوش مصنوعی را در نوشته‌ات لو می‌دهد",
+  "meta.description": "متنت را جای‌گذاری کن و ببین چه چیزی آن را شبیه ربات می‌کند، تا پیش از فرستادن درستش کنی. همه‌چیز کاملاً در مرورگر تو اجرا می‌شود — هیچ‌چیز جایی بارگذاری نمی‌شود.",
+
+  "skipToEditor": "رفتن به ویرایشگر",
+  "theme.switcherLabel": "پوسته",
+  "theme.auto": "خودکار",
+  "uilang.switcherLabel": "زبان",
+
+  "hero.heading": "ببین چه چیزی نوشته‌ات را شبیه ربات می‌کند.",
+  "hero.tagline": "پیش‌نویسی را پایین جای‌گذاری کن. unslop دقیقاً همان کلمه‌ها و عادت‌هایی را نشان می‌دهد که آن را لو می‌دهند، تا پیش از فرستادن درستشان کنی.",
+  "privacy.strong": "همه‌چیز در مرورگر تو اجرا می‌شود.",
+  "privacy.rest": "هیچ‌چیزی که جای‌گذاری می‌کنی بارگذاری، ذخیره یا جایی فرستاده نمی‌شود.",
+
+  "toolbar.ariaLabel": "عملکردهای ویرایشگر",
+  "toolbar.sampleHeavy": "یک نمونه بسیار مصنوعی را امتحان کن",
+  "toolbar.sampleSubtle": "یک نمونه ظریف را امتحان کن",
+  "toolbar.sampleSpanish": "یک نمونه اسپانیایی را امتحان کن",
+  "toolbar.clear": "پاک کردن",
+  "toolbar.copy": "کپی متن",
+  "toolbar.copied": "کپی شد",
+  "toolbar.wordCount.one": "{count} کلمه",
+  "toolbar.wordCount.other": "{count} کلمه",
+
+  "textlang.selectLabel": "متن را با این زبان بررسی کن",
+  "textlang.autoOption": "خودکار",
+  "textlang.autoDetected": "خودکار — شناسایی‌شده: {name}",
+  "textlang.autoFallback": "خودکار — هیچ تطابقی نیست",
+  "textlang.fallbackHint": "هیچ بسته زبانی با این متن تطابق نداشت. فقط بررسی‌های ساختاری و فهرست‌های واژگان انگلیسی اجرا شدند.",
+
+  "editor.textareaLabel": "نوشته‌ات — اینجا جای‌گذاری یا تایپ کن تا بررسی شود که شبیه هوش مصنوعی است یا نه",
+  "editor.placeholder": "متنت را اینجا جای‌گذاری یا تایپ کن...",
+  "editor.hintMarks": "نشانه‌ها چیزی را نشان می‌دهند که unslop پیدا کرده. برای دیدن جزئیات، ماوس را روی یک نشانه ببر یا با Tab به آن برو.",
+  "editor.hintTabbing": "{tab} را بزن تا وارد متن شوی، سپس دوباره {tab} را بزن تا بین نشانه‌ها جابه‌جا شوی.",
+
+  "results.ariaLabel": "نتیجه‌ها",
+  "score.eyebrow": "امتیاز هوش مصنوعی",
+  "score.unit": "/۱۰۰۰ کلمه",
+  "score.meta.words": "کلمه‌ها",
+  "score.meta.emdash": "خط تیره بلند",
+  "score.meta.emoji": "ایموجی",
+  "score.meta.rhythm": "ریتم جمله‌ها",
+  "score.rhythm.notEnough": "جمله‌های کافی نیست",
+  "score.rhythm.evenSuffix": " (خیلی یکنواخت)",
+  "score.liveAnnouncement": "امتیاز {score} در هر هزار کلمه. {verdict}.",
+
+  "verdict.good": "انسانی به نظر می‌رسد",
+  "verdict.warn": "چند نشانه از هوش مصنوعی دارد - یک بازبینی ارزشش را دارد",
+  "verdict.bad": "شبیه هوش مصنوعی است - به بازنویسی واقعی نیاز دارد",
+
+  "breakdown.heading": "جزئیات",
+  "category.phrase": "عبارت پرکننده",
+  "category.buzzword": "کلمه پرطرفدار",
+  "category.construction": "ساختار",
+  "category.hedge": "بیان محتاطانه",
+  "category.emoji": "ایموجی",
+  "category.emdash": "خط تیره بلند",
+  "category.bold-bullet": "گلوله پررنگ",
+  "breakdown.section.buzzword": "کلمه‌های پرطرفدار",
+  "breakdown.section.phrase": "عبارت‌های پرکننده",
+  "breakdown.section.construction": "ساختارها",
+  "breakdown.rhythmSurface": "ریتم و ویژگی‌های ظاهری",
+  "breakdown.clean.heading": "پاک و تمیز به نظر می‌رسد.",
+  "breakdown.clean.notEnoughText": "هنوز متن برای قضاوت کم است. برای نتیجه‌ای قابل اعتماد کمی بیشتر جای‌گذاری کن.",
+  "breakdown.clean.noneFired": "هیچ‌کدام از بررسی‌های unslop روی این متن فعال نشد.",
+  "finding.hitCount.one": "{count} بار",
+  "finding.hitCount.other": "{count} بار",
+  "finding.linesLabel": "خط {lines}",
+  "finding.styleNotScored": " (سبک نوشتار، در امتیاز حساب نمی‌شود)",
+  "finding.fixPrefix": "راه‌حل: ",
+
+  "surface.emdashLabel": "خط تیره بلند",
+  "surface.emdashExcess": "خط تیره بلند ({excess} بیشتر از حد معمول)",
+  "surface.emojiCount.one": "{count} ایموجی",
+  "surface.emojiCount.other": "{count} ایموجی",
+  "surface.boldBullet": "گلوله‌های **پررنگ**",
+  "surface.boldBulletTemplateRun": " (شبیه یک قالب آماده)",
+  "surface.sentenceVariation": "تنوع طول جمله‌ها",
+  "surface.suspiciouslyEven": " (به‌طرز مشکوکی یکنواخت)",
+
+  "explainer.summary": "چه چیزی بررسی می‌شود",
+  "explainer.buzzword.term": "کلمه‌های پرطرفدار",
+  "explainer.buzzword.def": "برخی کلمه‌ها در متن نوشته‌شده توسط ماشین با نرخی بسیار بیشتر از گفتار معمولی ظاهر می‌شوند. یکی از آن‌ها به‌تنهایی هیچ معنایی ندارد. اما خوشه‌ای از آن‌ها در یک پاراگراف، همان نشانه لو دهنده است.",
+  "explainer.phrase.term": "عبارت‌های پرکننده",
+  "explainer.phrase.def": "شروع‌ها و پایان‌های کلیشه‌ای که یک مدل به آن‌ها پناه می‌برد: مقدمه‌ای که فقط گلو صاف می‌کند، پیشنهاد کمک شاداب در پایان، اعلامی پیش از رسیدن به اصل موضوع. این‌ها تعداد کلمه‌ها را بدون افزودن چیزی زیاد می‌کنند.",
+  "explainer.construction.term": "ساختارها",
+  "explainer.construction.def": "این‌ها شکل جمله‌اند، نه کلمه‌های تکی: ساختن تضاد بین دو چیز فقط برای رسیدن به دومی، تکرار یک واقعیت با انکار عکس آن در ابتدا، و شروع با یک سؤال فقط به‌عنوان قلاب به‌جای رفتن مستقیم به اصل مطلب.",
+  "explainer.hedge.term": "بیان‌های محتاطانه",
+  "explainer.hedge.def": "کلمه‌هایی مثل ممکن است، اغلب و معمولاً، که در یک بخش از متن روی هم انباشته شده‌اند. به‌تنهایی در امتیاز اثری ندارند، اما ارزش نگاه کردن دارند. بیان‌های محتاطانه پشت‌سرهم زیاد، طفره‌آمیز به نظر می‌رسند.",
+  "explainer.emdash.term": "خط تیره بلند",
+  "explainer.emdash.def": "خط تیره بلند گاه‌به‌گاه نشانه‌گذاری معمولی است. اما یکی در تقریباً هر جمله، عادتی است که ارزش کنار گذاشتن دارد.",
+  "explainer.emoji.term": "ایموجی در متن",
+  "explainer.emoji.def": "در یک پیام چت خوب است، اما در یک گزارش، فایل README یا نامه معرفی بی‌جاست.",
+  "explainer.boldBullet.term": "گلوله‌های پررنگ",
+  "explainer.boldBullet.def": "ردیف بلندی از گلوله‌ها که همه از یک قالب پیروی می‌کنند: یک کلمه پررنگ، دونقطه، سپس توضیحی کوتاه. یکی یا دوتا فهرست معمولی است. چهار یا پنج‌تای پشت‌سرهم یک قالب آماده است.",
+  "explainer.rhythm.term": "ریتم جمله‌ها",
+  "explainer.rhythm.def": "متن واقعی بدون تلاش، طول جمله‌هایش را تغییر می‌دهد. وقتی هر جمله تقریباً دقیقاً هم‌طول باشد، همان یکنواختی خودش نشانه لو دهنده است.",
+
+  "footer.license": "برای استفاده غیرتجاری رایگان است؛ استفاده تجاری به مجوز نیاز دارد.",
+  "footer.sourceLinkText": "کد منبع در GitHub",
+  "footer.cliPrefix": "ترمینال را ترجیح می‌دهی؟ ",
+  "footer.cliSuffix": " در pre-commit یا CI جا می‌گیرد، با همان موتور امتیازدهی این صفحه.",
+  "footer.licenseLinkText": "مجوز",
+};

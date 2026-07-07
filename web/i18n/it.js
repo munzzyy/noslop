@@ -1,0 +1,116 @@
+// Italian (it). Same key set as en.js - see web/i18n/en.js for the rules
+// (do-not-translate list, {placeholder} discipline, plural categories).
+// Plural categories used here: one, many, other (verified via
+// Intl.PluralRules("it").resolvedOptions().pluralCategories). "many" is
+// Italian's rare large-round-number category; word/hit counts never
+// realistically reach it here, so its string mirrors "other".
+
+window.UnslopI18N = window.UnslopI18N || {};
+window.UnslopI18N.catalogs = window.UnslopI18N.catalogs || {};
+window.UnslopI18N.catalogs.it = {
+  "meta.title": "unslop — scopri cosa tradisce l'IA nel tuo testo",
+  "meta.description": "Incolla il tuo testo e scopri cosa lo fa suonare come un robot, così lo correggi prima di inviarlo. Tutto avviene nel tuo browser — niente viene caricato altrove.",
+
+  "skipToEditor": "Vai all'editor",
+  "theme.switcherLabel": "Tema",
+  "theme.auto": "Automatico",
+  "uilang.switcherLabel": "Lingua",
+
+  "hero.heading": "Scopri cosa fa suonare il tuo testo come un robot.",
+  "hero.tagline": "Incolla una bozza qui sotto. unslop indica le parole e le abitudini esatte che lo tradiscono, così le correggi prima di inviarlo.",
+  "privacy.strong": "Tutto avviene nel tuo browser.",
+  "privacy.rest": "Niente di quello che incolli viene caricato, salvato o inviato da nessuna parte.",
+
+  "toolbar.ariaLabel": "Azioni dell'editor",
+  "toolbar.sampleHeavy": "Prova un esempio molto artificiale",
+  "toolbar.sampleSubtle": "Prova un esempio sottile",
+  "toolbar.sampleSpanish": "Prova un esempio in spagnolo",
+  "toolbar.clear": "Cancella",
+  "toolbar.copy": "Copia testo",
+  "toolbar.copied": "Copiato",
+  "toolbar.wordCount.one": "{count} parola",
+  "toolbar.wordCount.many": "{count} parole",
+  "toolbar.wordCount.other": "{count} parole",
+
+  "textlang.selectLabel": "Valuta il testo come",
+  "textlang.autoOption": "Automatico",
+  "textlang.autoDetected": "Automatico — rilevato: {name}",
+  "textlang.autoFallback": "Automatico — nessuna corrispondenza",
+  "textlang.fallbackHint": "Nessun pacchetto linguistico corrisponde a questo testo. Sono stati eseguiti solo i controlli strutturali e le liste in inglese.",
+
+  "editor.textareaLabel": "Il tuo testo — incollalo o scrivilo qui per controllare se suona come un'IA",
+  "editor.placeholder": "Incolla o scrivi qui il tuo testo...",
+  "editor.hintMarks": "I segni mostrano cosa ha rilevato unslop. Passa il mouse o usa Tab su un segno per vedere il dettaglio.",
+  "editor.hintTabbing": "Premi {tab} per entrare nel testo, poi {tab} di nuovo per spostarti tra i segni.",
+
+  "results.ariaLabel": "Risultati",
+  "score.eyebrow": "Punteggio IA",
+  "score.unit": "/1000 parole",
+  "score.meta.words": "Parole",
+  "score.meta.emdash": "Lineette lunghe",
+  "score.meta.emoji": "Emoji",
+  "score.meta.rhythm": "Ritmo delle frasi",
+  "score.rhythm.notEnough": "poche frasi",
+  "score.rhythm.evenSuffix": " (troppo uniforme)",
+  "score.liveAnnouncement": "Punteggio {score} ogni mille parole. {verdict}.",
+
+  "verdict.good": "sembra scritto da una persona",
+  "verdict.warn": "qualche segno di IA - vale la pena rivederlo",
+  "verdict.bad": "sembra scritto da un'IA - serve una vera riscrittura",
+
+  "breakdown.heading": "Dettaglio",
+  "category.phrase": "Frase di riempimento",
+  "category.buzzword": "Parola di tendenza",
+  "category.construction": "Costruzione",
+  "category.hedge": "Attenuazione",
+  "category.emoji": "Emoji",
+  "category.emdash": "Lineetta lunga",
+  "category.bold-bullet": "Punto elenco in grassetto",
+  "breakdown.section.buzzword": "Parole di tendenza",
+  "breakdown.section.phrase": "Frasi di riempimento",
+  "breakdown.section.construction": "Costruzioni",
+  "breakdown.rhythmSurface": "Ritmo e superficie",
+  "breakdown.clean.heading": "Sembra pulito.",
+  "breakdown.clean.notEnoughText": "C'è ancora poco testo da valutare. Incollane un po' di più per un risultato affidabile.",
+  "breakdown.clean.noneFired": "Nessuno dei controlli di unslop si è attivato su questo testo.",
+  "finding.hitCount.one": "{count} volta",
+  "finding.hitCount.many": "{count} volte",
+  "finding.hitCount.other": "{count} volte",
+  "finding.linesLabel": "riga {lines}",
+  "finding.styleNotScored": " (stile, non conteggiato)",
+  "finding.fixPrefix": "Correzione: ",
+
+  "surface.emdashLabel": "lineette lunghe",
+  "surface.emdashExcess": "lineette lunghe ({excess} oltre il normale)",
+  "surface.emojiCount.one": "{count} emoji",
+  "surface.emojiCount.many": "{count} emoji",
+  "surface.emojiCount.other": "{count} emoji",
+  "surface.boldBullet": "punti elenco **in grassetto**",
+  "surface.boldBulletTemplateRun": " (sembra un modello)",
+  "surface.sentenceVariation": "variazione della lunghezza delle frasi",
+  "surface.suspiciouslyEven": " (sospettosamente uniforme)",
+
+  "explainer.summary": "Cosa controlla",
+  "explainer.buzzword.term": "Parole di tendenza",
+  "explainer.buzzword.def": "Alcune parole compaiono nei testi generati da macchine molto più spesso che nel linguaggio normale. Una da sola non significa nulla. Un gruppo nello stesso paragrafo è il segno rivelatore.",
+  "explainer.phrase.term": "Frasi di riempimento",
+  "explainer.phrase.def": "Aperture e chiusure di repertorio a cui un modello ricorre: un'introduzione che si limita a schiarirsi la voce, un'offerta di aiuto entusiasta alla fine, un annuncio prima ancora di entrare nell'argomento. Riempiono le parole senza aggiungere nulla.",
+  "explainer.construction.term": "Costruzioni",
+  "explainer.construction.def": "Forme della frase, non parole singole: costruire un contrasto tra due cose solo per arrivare alla seconda, ribadire un fatto negandone prima il contrario, e aprire con una domanda solo come richiamo invece di andare dritto al punto.",
+  "explainer.hedge.term": "Attenuazioni",
+  "explainer.hedge.def": "Parole come può, spesso e in genere, accumulate in uno stesso tratto di testo. Da sole non incidono sul punteggio, ma vale la pena notarle. Troppe attenuazioni di fila suonano evasive.",
+  "explainer.emdash.term": "Lineette lunghe",
+  "explainer.emdash.def": "Una lineetta ogni tanto è punteggiatura normale. Averne una in quasi ogni frase è un'abitudine da correggere.",
+  "explainer.emoji.term": "Emoji nel testo",
+  "explainer.emoji.def": "Va bene in un messaggio, fuori posto in una relazione, un README o una lettera di presentazione.",
+  "explainer.boldBullet.term": "Punti elenco in grassetto",
+  "explainer.boldBullet.def": "Una lunga serie di punti elenco che seguono tutti la stessa forma: una parola in grassetto, i due punti, poi una breve spiegazione. Uno o due sono un elenco normale. Quattro o cinque di fila sono un modello preconfezionato.",
+  "explainer.rhythm.term": "Ritmo delle frasi",
+  "explainer.rhythm.def": "Un testo vero varia la lunghezza delle frasi senza cercarlo apposta. Quando ogni frase ha quasi la stessa lunghezza, quella uniformità è già il segno rivelatore.",
+
+  "footer.license": "Gratis per uso non commerciale; l'uso commerciale richiede una licenza.",
+  "footer.sourceLinkText": "Codice sorgente su GitHub",
+  "footer.cliPrefix": "Preferisci il terminale? ",
+  "footer.cliSuffix": " si integra in pre-commit o in CI, con lo stesso motore di punteggio di questa pagina.",
+  "footer.licenseLinkText": "Licenza",
+};

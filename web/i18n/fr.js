@@ -1,0 +1,116 @@
+// French (fr). Same key set as en.js - see web/i18n/en.js for the rules
+// (do-not-translate list, {placeholder} discipline, plural categories).
+// Plural categories used here: one, many, other (verified via
+// Intl.PluralRules("fr").resolvedOptions().pluralCategories). "many" is
+// French's rare large-round-number category (millions); word/hit counts in
+// this app never realistically reach it, so its string mirrors "other".
+
+window.UnslopI18N = window.UnslopI18N || {};
+window.UnslopI18N.catalogs = window.UnslopI18N.catalogs || {};
+window.UnslopI18N.catalogs.fr = {
+  "meta.title": "unslop — repère ce qui trahit l'IA dans ton texte",
+  "meta.description": "Colle ton texte et découvre ce qui le fait sonner comme un robot, pour le corriger avant de l'envoyer. Tout se passe dans ton navigateur — rien n'est envoyé ailleurs.",
+
+  "skipToEditor": "Aller à l'éditeur",
+  "theme.switcherLabel": "Thème",
+  "theme.auto": "Automatique",
+  "uilang.switcherLabel": "Langue",
+
+  "hero.heading": "Découvre ce qui fait sonner ton texte comme un robot.",
+  "hero.tagline": "Colle un brouillon ci-dessous. unslop pointe les mots et les habitudes précises qui le trahissent, pour que tu les corriges avant d'envoyer.",
+  "privacy.strong": "Tout se passe dans ton navigateur.",
+  "privacy.rest": "Rien de ce que tu colles n'est envoyé, stocké ou transmis nulle part.",
+
+  "toolbar.ariaLabel": "Actions de l'éditeur",
+  "toolbar.sampleHeavy": "Essayer un exemple très artificiel",
+  "toolbar.sampleSubtle": "Essayer un exemple subtil",
+  "toolbar.sampleSpanish": "Essayer un exemple en espagnol",
+  "toolbar.clear": "Effacer",
+  "toolbar.copy": "Copier le texte",
+  "toolbar.copied": "Copié",
+  "toolbar.wordCount.one": "{count} mot",
+  "toolbar.wordCount.many": "{count} mots",
+  "toolbar.wordCount.other": "{count} mots",
+
+  "textlang.selectLabel": "Vérifier le texte en tant que",
+  "textlang.autoOption": "Automatique",
+  "textlang.autoDetected": "Automatique — détecté : {name}",
+  "textlang.autoFallback": "Automatique — aucune correspondance",
+  "textlang.fallbackHint": "Aucun ensemble de règles ne correspond à ce texte. Seules les vérifications structurelles et les listes en anglais ont tourné.",
+
+  "editor.textareaLabel": "Ton texte — colle-le ou tape-le ici pour vérifier s'il sonne comme une IA",
+  "editor.placeholder": "Colle ou tape ton texte ici...",
+  "editor.hintMarks": "Les marques montrent ce que unslop a repéré. Survole une marque ou atteins-la avec Tab pour voir le détail.",
+  "editor.hintTabbing": "Appuie sur {tab} pour entrer dans le texte, puis {tab} à nouveau pour passer d'une marque à l'autre.",
+
+  "results.ariaLabel": "Résultats",
+  "score.eyebrow": "Score IA",
+  "score.unit": "/1000 mots",
+  "score.meta.words": "Mots",
+  "score.meta.emdash": "Tirets cadratins",
+  "score.meta.emoji": "Emojis",
+  "score.meta.rhythm": "Rythme des phrases",
+  "score.rhythm.notEnough": "pas assez de phrases",
+  "score.rhythm.evenSuffix": " (trop régulier)",
+  "score.liveAnnouncement": "Score {score} pour mille mots. {verdict}.",
+
+  "verdict.good": "sonne humain",
+  "verdict.warn": "quelques tics d'IA - une relecture s'impose",
+  "verdict.bad": "sonne comme une IA - a besoin d'une vraie réécriture",
+
+  "breakdown.heading": "Détail",
+  "category.phrase": "Formule de remplissage",
+  "category.buzzword": "Mot à la mode",
+  "category.construction": "Construction",
+  "category.hedge": "Atténuateur",
+  "category.emoji": "Emoji",
+  "category.emdash": "Tiret cadratin",
+  "category.bold-bullet": "Puce en gras",
+  "breakdown.section.buzzword": "Mots à la mode",
+  "breakdown.section.phrase": "Formules de remplissage",
+  "breakdown.section.construction": "Constructions",
+  "breakdown.rhythmSurface": "Rythme et surface",
+  "breakdown.clean.heading": "Rien à signaler.",
+  "breakdown.clean.notEnoughText": "Il n'y a pas encore assez de texte pour juger. Colle-en un peu plus pour un résultat fiable.",
+  "breakdown.clean.noneFired": "Aucune des vérifications d'unslop ne s'est déclenchée sur ce texte.",
+  "finding.hitCount.one": "{count} occurrence",
+  "finding.hitCount.many": "{count} occurrences",
+  "finding.hitCount.other": "{count} occurrences",
+  "finding.linesLabel": "ligne {lines}",
+  "finding.styleNotScored": " (style, non noté)",
+  "finding.fixPrefix": "À corriger : ",
+
+  "surface.emdashLabel": "tirets cadratins",
+  "surface.emdashExcess": "tirets cadratins ({excess} de plus que la normale)",
+  "surface.emojiCount.one": "{count} emoji",
+  "surface.emojiCount.many": "{count} emojis",
+  "surface.emojiCount.other": "{count} emojis",
+  "surface.boldBullet": "puces **en gras**",
+  "surface.boldBulletTemplateRun": " (effet modèle tout fait)",
+  "surface.sentenceVariation": "variation de la longueur des phrases",
+  "surface.suspiciouslyEven": " (étrangement régulier)",
+
+  "explainer.summary": "Ce qui est vérifié",
+  "explainer.buzzword.term": "Mots à la mode",
+  "explainer.buzzword.def": "Certains mots reviennent dans les textes de machine à un rythme bien au-delà du langage courant. Un seul ne veut rien dire. Plusieurs regroupés dans un même paragraphe, c'est la trahison.",
+  "explainer.phrase.term": "Formules de remplissage",
+  "explainer.phrase.def": "Des entrées et des sorties toutes faites sur lesquelles un modèle se rabat : une amorce qui ne fait que se racler la gorge, une offre d'aide enjouée à la fin, une annonce avant même d'entrer dans le sujet. Ça gonfle le nombre de mots sans rien apporter.",
+  "explainer.construction.term": "Constructions",
+  "explainer.construction.def": "Des formes de phrase, pas des mots isolés : monter un contraste entre deux choses juste pour retomber sur la seconde, affirmer un fait en niant d'abord son contraire, et ouvrir par une question uniquement comme accroche au lieu d'aller droit au but.",
+  "explainer.hedge.term": "Atténuateurs",
+  "explainer.hedge.def": "Des mots comme peut, souvent et généralement, empilés dans un même passage. Ça ne compte pas dans le score à eux seuls, mais ça vaut le coup d'œil. Trop d'atténuateurs à la suite, ça sonne évasif.",
+  "explainer.emdash.term": "Tirets cadratins",
+  "explainer.emdash.def": "Un tiret de temps en temps, c'est de la ponctuation normale. Qu'il y en ait un dans presque chaque phrase, c'est une habitude à corriger.",
+  "explainer.emoji.term": "Emoji dans le texte",
+  "explainer.emoji.def": "À sa place dans un message, hors de propos dans un rapport, un README ou une lettre de motivation.",
+  "explainer.boldBullet.term": "Puces en gras",
+  "explainer.boldBullet.def": "Une longue série de puces qui suivent toutes la même forme : un mot en gras, deux-points, puis une courte explication. Une ou deux, c'est une liste normale. Quatre ou cinq d'affilée, c'est un modèle tout fait.",
+  "explainer.rhythm.term": "Rythme des phrases",
+  "explainer.rhythm.def": "Un texte réel fait varier la longueur de ses phrases sans y penser. Quand chaque phrase tombe à un mot ou deux près de la même longueur, cette régularité est elle-même la trahison.",
+
+  "footer.license": "Gratuit pour un usage non commercial ; l'usage commercial nécessite une licence.",
+  "footer.sourceLinkText": "Code source sur GitHub",
+  "footer.cliPrefix": "Tu préfères le terminal ? ",
+  "footer.cliSuffix": " s'intègre au pre-commit ou à la CI, avec le même moteur de score que cette page.",
+  "footer.licenseLinkText": "Licence",
+};

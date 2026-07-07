@@ -1,8 +1,16 @@
 /*
- * unslop web app — wires the DOM to window.Unslop (detector.js).
+ * unslop web app — wires the DOM to window.Unslop (detector.js) and
+ * window.UnslopI18N (i18n/registry.js + i18n/<code>.js catalogs).
  * Classic script on purpose: file:// pages can't use ES module imports
  * (CORS blocks them), so no `import`/`export` here. Everything below reads
- * from the global `Unslop` object detector.js attaches to `window`.
+ * from the global `Unslop` and `UnslopI18N` objects.
+ *
+ * Two separate language controls live in this file - don't conflate them:
+ *   - UI LANGUAGE (#uilang-select): what the app's own chrome reads in.
+ *     Persisted (localStorage + URL), driven by UnslopI18N.
+ *   - TEXT LANGUAGE (#text-lang-select): what the pasted writing is SCORED
+ *     as. Session-only, never persisted - it's a per-text choice. Feeds
+ *     {lang: code} into Unslop.analyze()/.highlight().
  *
  * Zero network activity: no fetch, no XHR, no external anything. Every byte
  * this page needs is already loaded from the local web/ folder.
@@ -31,16 +39,28 @@
   var tooltip = document.getElementById("mark-tooltip");
   var themeSelect = document.getElementById("theme-select");
   var themeColorMeta = document.getElementById("theme-color-meta");
+  var metaDescriptionEl = document.getElementById("meta-description");
+  var editorHintTabbing = document.getElementById("editor-hint-tabbing");
 
   var btnSampleHeavy = document.getElementById("btn-sample-heavy");
   var btnSampleSubtle = document.getElementById("btn-sample-subtle");
+  var btnSampleSpanish = document.getElementById("btn-sample-spanish");
   var btnClear = document.getElementById("btn-clear");
   var btnCopy = document.getElementById("btn-copy");
+  var btnCopyLabel = document.getElementById("btn-copy-label");
+
+  var uilangSelect = document.getElementById("uilang-select");
+  var textLangSelect = document.getElementById("text-lang-select");
+  var textLangAutoOption = document.getElementById("text-lang-auto-option");
+  var textLangFallbackHint = document.getElementById("text-lang-fallback-hint");
 
   // ---------- sample texts ----------
   // Maximal-slop sample lands well into the red band; the subtle one sits in
-  // the amber "worth a pass" range. Both are original text written for this
-  // tool, not lifted from anywhere.
+  // the amber "worth a pass" range. All three are original text written for
+  // this tool, not lifted from anywhere. Samples stay in their own language
+  // regardless of the UI language picked above - they're demo content, and
+  // the Spanish one exists specifically so the multilingual scoring is
+  // discoverable without the user needing to paste their own Spanish text.
 
   var SAMPLE_HEAVY =
     "In today's fast-paced digital landscape, it's important to note that " +
@@ -90,6 +110,26 @@
     "week of launch, since last time that conversation ran long.\n\n" +
     "Happy to walk through any of this live if the doc isn't enough context. " +
     "Just grab fifteen minutes.";
+
+  var SAMPLE_SPANISH =
+    "En el mundo actual de la tecnología, es importante destacar que las " +
+    "pequeñas empresas necesitan una plataforma robusta para no quedarse " +
+    "atrás. Nuestra solución integral es tu invitación a hacer más: " +
+    "sumérgete en un vasto abanico de posibilidades, con una experiencia " +
+    "fluida y sin fisuras pensada para cada equipo. No es solo un programa, " +
+    "es un cambio de paradigma que impulsa la innovación en tu negocio.\n\n" +
+    "¿Alguna vez te has preguntado cómo sería llevar a tu equipo al " +
+    "siguiente nivel sin complicaciones? Profundicemos en las formas en que " +
+    "nuestro enfoque holístico empodera a cada persona del equipo para " +
+    "navegar la complejidad del trabajo diario.\n\n" +
+    "Esto es lo que nos distingue:\n" +
+    "- **Velocidad:** entregamos más rápido que la competencia\n" +
+    "- **Confianza:** un socio en el que puedes confiar\n" +
+    "- **Innovación:** siempre a la vanguardia del sector\n\n" +
+    "Ya seas una startup o una empresa consolidada, esta solución " +
+    "revolucionaria tiene todo lo que necesitas para crecer. Espero que " +
+    "esto te ayude. Siéntete libre de escribirnos si tienes alguna " +
+    "pregunta. Atrás quedaron los días de gestionar todo a mano.";
 
   // ---------- theme ----------
   // "auto" (no data-theme attribute) follows prefers-color-scheme between
@@ -151,7 +191,122 @@
     else if (systemSchemeQuery.addListener) systemSchemeQuery.addListener(resyncIfAuto); // Safari < 14
   }
 
-  initTheme();
+  // ---------- UI language ----------
+
+  function populateUilangSelect() {
+    var locales = window.UnslopI18N.LOCALES;
+    for (var i = 0; i < locales.length; i++) {
+      var opt = document.createElement("option");
+      opt.value = locales[i].code;
+      opt.textContent = locales[i].autonym;
+      uilangSelect.appendChild(opt);
+    }
+  }
+
+  function buildTabKbd() {
+    var kbd = document.createElement("kbd");
+    kbd.textContent = "Tab";
+    return kbd;
+  }
+
+  // Rebuilds `container` from `template`, splitting on the literal `token`
+  // substring (e.g. "{tab}") and inserting a fresh DOM node (never raw HTML)
+  // at each split point. Lets a translated sentence place a real <kbd>
+  // element wherever its own word order needs it, any number of times,
+  // without ever putting HTML markup inside a translation string.
+  function renderTokenTemplate(container, template, token, buildNode) {
+    container.textContent = "";
+    var parts = template.split(token);
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i]) container.appendChild(document.createTextNode(parts[i]));
+      if (i < parts.length - 1) container.appendChild(buildNode());
+    }
+  }
+
+  function renderTabbingHint() {
+    renderTokenTemplate(editorHintTabbing, window.UnslopI18N.t("editor.hintTabbing"), "{tab}", buildTabKbd);
+  }
+
+  // Applies every static (text-independent) translated string to the DOM:
+  // document title/meta, [data-i18n] textContent, [data-i18n-aria] labels,
+  // [data-i18n-placeholder] placeholders, and the token-rendered tab hint.
+  // Called once at load and again every time the UI language changes.
+  function applyStaticI18n() {
+    var t = window.UnslopI18N.t;
+    document.title = t("meta.title");
+    if (metaDescriptionEl) metaDescriptionEl.setAttribute("content", t("meta.description"));
+
+    var textNodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < textNodes.length; i++) {
+      textNodes[i].textContent = t(textNodes[i].getAttribute("data-i18n"));
+    }
+    var ariaNodes = document.querySelectorAll("[data-i18n-aria]");
+    for (var j = 0; j < ariaNodes.length; j++) {
+      ariaNodes[j].setAttribute("aria-label", t(ariaNodes[j].getAttribute("data-i18n-aria")));
+    }
+    var placeholderNodes = document.querySelectorAll("[data-i18n-placeholder]");
+    for (var k = 0; k < placeholderNodes.length; k++) {
+      placeholderNodes[k].setAttribute("placeholder", t(placeholderNodes[k].getAttribute("data-i18n-placeholder")));
+    }
+    renderTabbingHint();
+    uilangSelect.value = window.UnslopI18N.getLocale();
+  }
+
+  function onUiLanguageChange() {
+    applyStaticI18n();
+    runAnalysis();
+  }
+
+  uilangSelect.addEventListener("change", function () {
+    window.UnslopI18N.setLocale(uilangSelect.value, { onChange: onUiLanguageChange });
+  });
+
+  // ---------- text language (forces the pasted TEXT's scoring pack) ----------
+  // Session-only by design: never written to localStorage or the URL, so a
+  // reload always comes back to "auto". This is a per-text choice, not a
+  // sticky preference like the UI language above.
+
+  var forcedTextLang = "auto";
+
+  function populateTextLangSelect() {
+    var langs = window.Unslop.LANGUAGES;
+    var codes = Object.keys(langs);
+    for (var i = 0; i < codes.length; i++) {
+      var code = codes[i];
+      var opt = document.createElement("option");
+      opt.value = code;
+      opt.textContent = langs[code].name;
+      textLangSelect.appendChild(opt);
+    }
+  }
+
+  textLangSelect.addEventListener("change", function () {
+    forcedTextLang = textLangSelect.value;
+    runAnalysis();
+  });
+
+  // Keeps the "Auto" option's own label live ("Auto — detected: Español"),
+  // and shows an honest hint when auto-detect couldn't match any pack.
+  // language_source is only ever "fallback" while forcedTextLang is "auto"
+  // (a forced pack always resolves with source "forced" - see detector.js's
+  // resolvePack()), so no extra guard against a forced pack is needed here.
+  function updateTextLangStatus(text, result) {
+    var t = window.UnslopI18N.t;
+    if (!text.trim()) {
+      textLangAutoOption.textContent = t("textlang.autoOption");
+      textLangFallbackHint.hidden = true;
+      return;
+    }
+    if (result.language_source === "fallback") {
+      textLangAutoOption.textContent = t("textlang.autoFallback");
+      textLangFallbackHint.textContent = t("textlang.fallbackHint");
+      textLangFallbackHint.hidden = false;
+    } else {
+      var pack = window.Unslop.LANGUAGES[result.language];
+      textLangAutoOption.textContent = t("textlang.autoDetected", { name: pack ? pack.name : result.language });
+      textLangFallbackHint.hidden = true;
+    }
+  }
 
   // ---------- html escaping for the backdrop ----------
 
@@ -175,19 +330,23 @@
   // Build the backdrop's inner HTML: escaped text with <mark> spans dropped
   // in at the ranges highlight() returned. Ranges are flat and
   // non-overlapping (detector.js guarantees this), so a single linear walk
-  // is enough.
+  // is enough. The category label shown in data-label/aria-label is the UI
+  // language's own translation (keyed off Unslop.CATEGORY_META's category
+  // ids); the per-mark `hint` text is whatever the matched TEXT-language
+  // pack produced it in, and is never re-translated here.
   function buildBackdropHtml(text, ranges) {
     if (!ranges.length) return escapeHtml(text);
+    var t = window.UnslopI18N.t;
     var out = [];
     var cursor = 0;
     for (var i = 0; i < ranges.length; i++) {
       var r = ranges[i];
       if (r.start > cursor) out.push(escapeHtml(text.slice(cursor, r.start)));
       var cls = CATEGORY_CLASS[r.category] || "m-buzzword";
-      var meta = (window.Unslop.CATEGORY_META && window.Unslop.CATEGORY_META[r.category]) || { label: r.category };
-      var title = meta.label + (r.hint ? " — " + r.hint : "");
+      var label = t("category." + r.category);
+      var title = label + (r.hint ? " — " + r.hint : "");
       out.push(
-        '<mark class="' + cls + '" tabindex="0" data-label="' + escapeHtml(meta.label) + '"' +
+        '<mark class="' + cls + '" tabindex="0" data-label="' + escapeHtml(label) + '"' +
         (r.hint ? ' data-hint="' + escapeHtml(r.hint) + '"' : "") +
         ' aria-label="' + escapeHtml(title) + '">' +
         escapeHtml(text.slice(r.start, r.end)) +
@@ -217,7 +376,7 @@
     tooltip.innerHTML =
       '<span class="tt-label"></span>' + (hint ? '<span class="tt-hint"></span>' : "");
     tooltip.querySelector(".tt-label").textContent = label;
-    if (hint) tooltip.querySelector(".tt-hint").textContent = "Fix: " + hint;
+    if (hint) tooltip.querySelector(".tt-hint").textContent = window.UnslopI18N.t("finding.fixPrefix") + hint;
 
     var rect = mark.getBoundingClientRect();
     var top = rect.top - 10;
@@ -268,6 +427,7 @@
 
   // ---------- score animation (respects reduced motion) ----------
 
+  var SCORE_FRACTION_OPTS = { minimumFractionDigits: 1, maximumFractionDigits: 1 };
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var scoreRaf = null;
   var displayedScore = 0;
@@ -276,7 +436,7 @@
     if (scoreRaf) cancelAnimationFrame(scoreRaf);
     if (reduceMotion) {
       displayedScore = target;
-      scoreNumberEl.textContent = target.toFixed(1);
+      scoreNumberEl.textContent = window.UnslopI18N.formatNumber(target, SCORE_FRACTION_OPTS);
       return;
     }
     var start = displayedScore;
@@ -290,12 +450,12 @@
       var eased = 1 - Math.pow(1 - t, 3);
       var value = start + (target - start) * eased;
       displayedScore = value;
-      scoreNumberEl.textContent = value.toFixed(1);
+      scoreNumberEl.textContent = window.UnslopI18N.formatNumber(value, SCORE_FRACTION_OPTS);
       if (t < 1) {
         scoreRaf = requestAnimationFrame(tick);
       } else {
         displayedScore = target;
-        scoreNumberEl.textContent = target.toFixed(1);
+        scoreNumberEl.textContent = window.UnslopI18N.formatNumber(target, SCORE_FRACTION_OPTS);
       }
     }
     scoreRaf = requestAnimationFrame(tick);
@@ -313,15 +473,27 @@
     return "good";
   }
 
-  // ---------- breakdown rendering ----------
+  // Maps detector.js's three stable English verdict strings (the JSON
+  // contract - never localized on the wire) to this catalog's display keys.
+  // An unrecognized string (a future detector.js verdict app.js hasn't
+  // caught up with yet) falls back to showing the raw English string rather
+  // than crashing or going blank.
+  var VERDICT_KEY_BY_STRING = {
+    "looks human": "verdict.good",
+    "some AI tells - worth a pass": "verdict.warn",
+    "reads as AI - needs a real rewrite": "verdict.bad",
+  };
 
-  function pluralize(n, word) {
-    return n + " " + word + (n === 1 ? "" : "s");
+  function localizedVerdict(rawVerdict) {
+    var key = VERDICT_KEY_BY_STRING[rawVerdict];
+    return key ? window.UnslopI18N.t(key) : rawVerdict;
   }
+
+  // ---------- breakdown rendering ----------
 
   function linesLabel(lines) {
     if (!lines || !lines.length) return "";
-    return "line " + lines.join(", ");
+    return window.UnslopI18N.t("finding.linesLabel", { lines: lines.join(", ") });
   }
 
   function buildFindingItem(term, count, lines, hint) {
@@ -335,7 +507,7 @@
 
     var countEl = document.createElement("span");
     countEl.className = "finding-count";
-    countEl.textContent = pluralize(count, "hit");
+    countEl.textContent = window.UnslopI18N.tCount("finding.hitCount", count);
     li.appendChild(countEl);
 
     if (lines && lines.length) {
@@ -375,7 +547,7 @@
     rows.forEach(function (row) {
       if (kind === "pattern") {
         var label = row[0], count = row[1], weight = row[2], hint = row[3], lines = row[4];
-        var term = label + (weight === 0 ? " (style, not scored)" : "");
+        var term = label + (weight === 0 ? window.UnslopI18N.t("finding.styleNotScored") : "");
         list.appendChild(buildFindingItem(term, count, lines, hint));
       } else {
         var key = row[0], cnt = row[1], ln = row[2];
@@ -387,6 +559,7 @@
   }
 
   function renderBreakdown(result) {
+    var t = window.UnslopI18N.t;
     breakdownBody.innerHTML = "";
 
     var hasBuzz = result.buzzwords.length > 0;
@@ -401,18 +574,18 @@
       clean.className = "clean-state";
       clean.innerHTML =
         '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>' +
-        '<span><strong>Reads clean.</strong>' +
-        (result.words < 30
-          ? " Not much text to judge yet. Paste a bit more for a confident read."
-          : " None of unslop's checks fired on this text.") +
-        "</span>";
+        '<span><strong></strong> <span></span></span>';
+      clean.querySelector("strong").textContent = t("breakdown.clean.heading");
+      clean.querySelector("span span").textContent = result.words < 30
+        ? t("breakdown.clean.notEnoughText")
+        : t("breakdown.clean.noneFired");
       breakdownBody.appendChild(clean);
       return;
     }
 
-    if (hasBuzz) breakdownBody.appendChild(buildSection("Buzzwords", "swatch-buzzword", result.buzzwords, "buzz"));
-    if (hasPhrase) breakdownBody.appendChild(buildSection("Filler phrases", "swatch-phrase", result.phrases, "phrase"));
-    if (hasPattern) breakdownBody.appendChild(buildSection("Constructions", "swatch-construction", result.patterns, "pattern"));
+    if (hasBuzz) breakdownBody.appendChild(buildSection(t("breakdown.section.buzzword"), "swatch-buzzword", result.buzzwords, "buzz"));
+    if (hasPhrase) breakdownBody.appendChild(buildSection(t("breakdown.section.phrase"), "swatch-phrase", result.phrases, "phrase"));
+    if (hasPattern) breakdownBody.appendChild(buildSection(t("breakdown.section.construction"), "swatch-construction", result.patterns, "pattern"));
 
     // Rhythm & surface — always show the section once anything in it is
     // non-zero/flagged, as a set of small stat tiles rather than a list.
@@ -421,48 +594,58 @@
       section.className = "breakdown-section";
       var title = document.createElement("p");
       title.className = "breakdown-section-title";
-      title.innerHTML = '<span class="swatch swatch-emdash" aria-hidden="true"></span>Rhythm &amp; surface';
+      var sw = document.createElement("span");
+      sw.className = "swatch swatch-emdash";
+      sw.setAttribute("aria-hidden", "true");
+      title.appendChild(sw);
+      title.appendChild(document.createTextNode(t("breakdown.rhythmSurface")));
       section.appendChild(title);
 
       var grid = document.createElement("div");
       grid.className = "surface-stats";
 
       function tile(value, label, flagged) {
-        var t = document.createElement("div");
-        t.className = "stat-tile";
-        if (flagged) t.setAttribute("data-flag", "true");
+        var tileEl = document.createElement("div");
+        tileEl.className = "stat-tile";
+        if (flagged) tileEl.setAttribute("data-flag", "true");
         var v = document.createElement("div");
         v.className = "stat-tile-value";
         v.textContent = value;
         var l = document.createElement("div");
         l.className = "stat-tile-label";
         l.textContent = label;
-        t.appendChild(v);
-        t.appendChild(l);
-        return t;
+        tileEl.appendChild(v);
+        tileEl.appendChild(l);
+        return tileEl;
       }
 
       if (result.em_dashes > 0) {
         grid.appendChild(tile(
-          result.em_dashes,
-          result.em_dash_excess > 0 ? "em dashes (" + result.em_dash_excess + " past normal density)" : "em dashes",
+          window.UnslopI18N.formatNumber(result.em_dashes),
+          result.em_dash_excess > 0
+            ? t("surface.emdashExcess", { excess: window.UnslopI18N.formatNumber(result.em_dash_excess) })
+            : t("surface.emdashLabel"),
           result.em_dash_excess > 0
         ));
       }
       if (result.emoji > 0) {
-        grid.appendChild(tile(result.emoji, pluralize(result.emoji, "emoji"), true));
+        grid.appendChild(tile(
+          window.UnslopI18N.formatNumber(result.emoji),
+          window.UnslopI18N.tCount("surface.emojiCount", result.emoji),
+          true
+        ));
       }
       if (result.bold_label_bullets > 0) {
         grid.appendChild(tile(
-          result.bold_label_bullets,
-          "**Term:** bullets" + (result.bold_label_bullets >= 3 ? " (template run)" : ""),
+          window.UnslopI18N.formatNumber(result.bold_label_bullets),
+          t("surface.boldBullet") + (result.bold_label_bullets >= 3 ? t("surface.boldBulletTemplateRun") : ""),
           result.bold_label_bullets >= 3
         ));
       }
       if (result.sentence_uniformity_cv !== null) {
         grid.appendChild(tile(
-          result.sentence_uniformity_cv.toFixed(2),
-          "sentence-length variation" + (result.sentence_uniformity_cv < 0.35 ? " (suspiciously even)" : ""),
+          window.UnslopI18N.formatNumber(result.sentence_uniformity_cv, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          t("surface.sentenceVariation") + (result.sentence_uniformity_cv < 0.35 ? t("surface.suspiciouslyEven") : ""),
           result.sentence_uniformity_cv < 0.35
         ));
       }
@@ -474,30 +657,38 @@
   // ---------- main run loop ----------
 
   function runAnalysis() {
+    var t = window.UnslopI18N.t;
     var text = textarea.value;
-    var result = window.Unslop.analyze(text);
-    var ranges = window.Unslop.highlight(text);
+    var opts = { lang: forcedTextLang };
+    var result = window.Unslop.analyze(text, opts);
+    var ranges = window.Unslop.highlight(text, opts);
 
     backdrop.innerHTML = buildBackdropHtml(text, ranges);
     syncScroll();
 
-    wordCountEl.textContent = pluralize(result.words, "word");
+    updateTextLangStatus(text, result);
+
+    wordCountEl.textContent = window.UnslopI18N.tCount("toolbar.wordCount", result.words);
 
     var band = verdictBand(result.score_per_1k);
+    var verdictDisplay = localizedVerdict(result.verdict);
     scoreCard.setAttribute("data-verdict", band);
-    verdictTextEl.textContent = result.verdict;
+    verdictTextEl.textContent = verdictDisplay;
     verdictIconEl.innerHTML = VERDICT_ICONS[band];
     animateScoreTo(result.score_per_1k);
 
-    metaWords.textContent = result.words;
-    metaEmdash.textContent = result.em_dashes;
-    metaEmoji.textContent = result.emoji;
+    metaWords.textContent = window.UnslopI18N.formatNumber(result.words);
+    metaEmdash.textContent = window.UnslopI18N.formatNumber(result.em_dashes);
+    metaEmoji.textContent = window.UnslopI18N.formatNumber(result.emoji);
     metaRhythm.textContent = result.sentence_uniformity_cv === null
-      ? "not enough sentences"
-      : result.sentence_uniformity_cv.toFixed(2) + (result.sentence_uniformity_cv < 0.35 ? " (even)" : "");
+      ? t("score.rhythm.notEnough")
+      : window.UnslopI18N.formatNumber(result.sentence_uniformity_cv, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+        (result.sentence_uniformity_cv < 0.35 ? t("score.rhythm.evenSuffix") : "");
 
-    scoreLiveEl.textContent =
-      "Score " + result.score_per_1k.toFixed(1) + " per thousand words. " + result.verdict + ".";
+    scoreLiveEl.textContent = t("score.liveAnnouncement", {
+      score: window.UnslopI18N.formatNumber(result.score_per_1k, SCORE_FRACTION_OPTS),
+      verdict: verdictDisplay,
+    });
 
     renderBreakdown(result);
   }
@@ -520,15 +711,15 @@
 
   btnSampleHeavy.addEventListener("click", function () { setText(SAMPLE_HEAVY); });
   btnSampleSubtle.addEventListener("click", function () { setText(SAMPLE_SUBTLE); });
+  btnSampleSpanish.addEventListener("click", function () { setText(SAMPLE_SPANISH); });
   btnClear.addEventListener("click", function () { setText(""); });
 
   var copyResetTimer = null;
-  var btnCopyOriginalHtml = btnCopy.innerHTML; // captured once, before any "Copied" swap
   function flashCopyButton() {
-    btnCopy.innerHTML = btnCopyOriginalHtml.replace("Copy text", "Copied");
+    btnCopyLabel.textContent = window.UnslopI18N.t("toolbar.copied");
     if (copyResetTimer) clearTimeout(copyResetTimer);
     copyResetTimer = setTimeout(function () {
-      btnCopy.innerHTML = btnCopyOriginalHtml;
+      btnCopyLabel.textContent = window.UnslopI18N.t("toolbar.copy");
     }, 1400);
   }
 
@@ -562,10 +753,13 @@
   }
 
   // ---------- url-driven demo state (shareable / deep-linkable) ----------
-  // ?sample=heavy|subtle preloads an example and ?theme=<id>|auto forces a
-  // theme (any id from THEMES, e.g. ?theme=solarized-dark), so a link can
-  // drop someone straight onto the tool already showing what it does.
-  // Falls back silently if the URL can't be parsed.
+  // ?sample=heavy|subtle|spanish preloads an example and ?theme=<id>|auto
+  // forces a theme (any id from THEMES, e.g. ?theme=solarized-dark), so a
+  // link can drop someone straight onto the tool already showing what it
+  // does. ?uilang=<code> is handled separately, inside
+  // UnslopI18N.detectLocale() (see i18n/registry.js) - it's the top-priority
+  // source there, so it's already applied by the time this runs. Falls back
+  // silently if the URL can't be parsed.
   (function applyUrlState() {
     var params;
     try { params = new URLSearchParams(window.location.search); } catch (_e) { return; }
@@ -580,9 +774,15 @@
     var sample = params.get("sample");
     if (sample === "heavy") textarea.value = SAMPLE_HEAVY;
     else if (sample === "subtle") textarea.value = SAMPLE_SUBTLE;
+    else if (sample === "spanish") textarea.value = SAMPLE_SPANISH;
   })();
 
   // ---------- initial paint ----------
 
+  populateUilangSelect();
+  window.UnslopI18N.initLocale();
+  applyStaticI18n();
+  initTheme();
+  populateTextLangSelect();
   runAnalysis();
 })();

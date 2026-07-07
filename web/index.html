@@ -4,12 +4,18 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>unslop — flag the AI tells in your writing</title>
-<meta name="description" content="Paste your writing and see what makes it read like a robot, so you can fix it before you send it. Runs entirely in your browser — nothing is uploaded." />
+<meta name="description" content="Paste your writing and see what makes it read like a robot, so you can fix it before you send it. Runs entirely in your browser — nothing is uploaded." id="meta-description" />
 <meta name="color-scheme" content="light dark" />
 <meta name="theme-color" content="#f4efe6" id="theme-color-meta" />
 <script>
-// Applies a saved theme before first paint so returning visitors don't see
-// the default flash in first. Keep the id list in sync with THEMES in app.js.
+// Applies a saved theme, and a saved/URL UI language's lang+dir, before first
+// paint so returning visitors don't see the default flash in first. Keep the
+// id lists in sync with THEMES in app.js and LOCALES in i18n/registry.js.
+// Detecting an UNSET language from navigator.language is deliberately NOT
+// done here (it would need the same subtag-fallback matching registry.js
+// already has, which stops this staying a "simple" pre-paint snippet) - a
+// first-time visitor's non-English browser gets the real detected language
+// once app.js runs, same as any other first paint before a choice is saved.
 (function () {
   try {
     var t = localStorage.getItem("unslop:theme");
@@ -18,6 +24,18 @@
       document.documentElement.setAttribute("data-theme", t);
     }
   } catch (_e) {}
+  try {
+    var UI_LANGS = ["en", "es", "pt-BR", "fr", "it", "de", "nl", "sv", "nb",
+      "da", "fi", "pl", "cs", "hu", "ro", "uk", "ru", "el", "tr", "id", "vi",
+      "tl", "zh-Hans", "zh-Hant", "ja", "ko", "hi", "bn", "th", "ar", "he", "fa"];
+    var RTL_LANGS = ["ar", "he", "fa"];
+    var params = new URLSearchParams(location.search);
+    var lang = params.get("uilang") || localStorage.getItem("unslop:uilang");
+    if (lang && UI_LANGS.indexOf(lang) !== -1) {
+      document.documentElement.setAttribute("lang", lang);
+      document.documentElement.setAttribute("dir", RTL_LANGS.indexOf(lang) !== -1 ? "rtl" : "ltr");
+    }
+  } catch (_e2) {}
 })();
 </script>
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -25,7 +43,7 @@
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<a class="skip-link" href="#editor-textarea">Skip to editor</a>
+<a class="skip-link" href="#editor-textarea" data-i18n="skipToEditor">Skip to editor</a>
 
 <div class="page">
 
@@ -40,14 +58,25 @@
         unslop
       </span>
       <div class="header-actions">
+        <div class="uilang-picker theme-picker">
+          <svg class="theme-picker-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M3 12h18M12 3c2.4 2.5 3.7 5.6 3.7 9s-1.3 6.5-3.7 9c-2.4-2.5-3.7-5.6-3.7-9s1.3-6.5 3.7-9Z"/>
+          </svg>
+          <label for="uilang-select" class="sr-only" data-i18n="uilang.switcherLabel">Language</label>
+          <select id="uilang-select" class="theme-select uilang-select"></select>
+          <svg class="theme-picker-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </div>
         <div class="theme-picker">
           <svg class="theme-picker-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="3" y="3" width="12" height="12" rx="3" transform="rotate(-8 9 9)"/>
             <rect x="9" y="9" width="12" height="12" rx="3"/>
           </svg>
-          <label for="theme-select" class="sr-only">Theme</label>
+          <label for="theme-select" class="sr-only" data-i18n="theme.switcherLabel">Theme</label>
           <select id="theme-select" class="theme-select">
-            <option value="auto">Auto</option>
+            <option value="auto" data-i18n="theme.auto">Auto</option>
             <option value="light">Paper</option>
             <option value="dark">Ink</option>
             <option value="terminal">Terminal</option>
@@ -66,59 +95,78 @@
     </div>
 
     <div class="hero">
-      <h1>See what makes your writing sound like a robot.</h1>
-      <p class="tagline">Paste a draft below. unslop points at the exact words and habits that give it away, so you can fix them before you hit send.</p>
+      <h1 data-i18n="hero.heading">See what makes your writing sound like a robot.</h1>
+      <p class="tagline" data-i18n="hero.tagline">Paste a draft below. unslop points at the exact words and habits that give it away, so you can fix them before you hit send.</p>
       <p class="privacy-line">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3l7 3.2v5.1c0 4.6-3 8.9-7 10.2-4-1.3-7-4.6-7-10.2V6.2L12 3Z"/>
           <path d="M9 12.2l2.1 2.1L15.5 10"/>
         </svg>
-        <span><strong>Everything runs in your browser.</strong> Nothing you paste is uploaded, stored, or sent anywhere.</span>
+        <span><strong data-i18n="privacy.strong">Everything runs in your browser.</strong> <span data-i18n="privacy.rest">Nothing you paste is uploaded, stored, or sent anywhere.</span></span>
       </p>
     </div>
   </header>
 
   <main id="main">
-    <div class="toolbar" role="toolbar" aria-label="Editor actions">
+    <div class="toolbar" role="toolbar" data-i18n-aria="toolbar.ariaLabel" aria-label="Editor actions">
       <button type="button" class="btn btn-primary" id="btn-sample-heavy">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.4 6.9 7.1.2-5.7 4.4 2.1 7-5.9-4.3-5.9 4.3 2.1-7-5.7-4.4 7.1-.2z"/></svg>
-        Try a heavy-slop sample
+        <span data-i18n="toolbar.sampleHeavy">Try a heavy-slop sample</span>
       </button>
-      <button type="button" class="btn" id="btn-sample-subtle">Try a subtle sample</button>
+      <button type="button" class="btn" id="btn-sample-subtle"><span data-i18n="toolbar.sampleSubtle">Try a subtle sample</span></button>
+      <button type="button" class="btn" id="btn-sample-spanish"><span data-i18n="toolbar.sampleSpanish">Try a Spanish sample</span></button>
       <button type="button" class="btn btn-ghost" id="btn-clear">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4.8c0-.4.4-.8.8-.8h4.4c.4 0 .8.4.8.8V7M6 7l1 12.2c0 1 .8 1.8 1.8 1.8h6.4c1 0 1.8-.8 1.8-1.8L18 7"/></svg>
-        Clear
+        <span data-i18n="toolbar.clear">Clear</span>
       </button>
       <button type="button" class="btn btn-ghost" id="btn-copy">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-        Copy text
+        <span id="btn-copy-label" data-i18n="toolbar.copy">Copy text</span>
       </button>
       <span class="toolbar-spacer"></span>
       <span class="word-count" id="word-count" aria-hidden="true">0 words</span>
     </div>
 
+    <div class="text-lang-bar">
+      <div class="text-lang-picker theme-picker">
+        <svg class="theme-picker-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M3 12h18M12 3c2.4 2.5 3.7 5.6 3.7 9s-1.3 6.5-3.7 9c-2.4-2.5-3.7-5.6-3.7-9s1.3-6.5 3.7-9Z"/>
+        </svg>
+        <label for="text-lang-select" class="sr-only" data-i18n="textlang.selectLabel">Check text as</label>
+        <select id="text-lang-select" class="theme-select text-lang-select">
+          <option value="auto" id="text-lang-auto-option" data-i18n="textlang.autoOption">Auto</option>
+        </select>
+        <svg class="theme-picker-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </div>
+      <p class="text-lang-fallback-hint" id="text-lang-fallback-hint" hidden></p>
+    </div>
+
     <div class="editor-shell">
       <div class="editor-frame">
         <div class="editor-surface editor-backdrop" id="editor-backdrop" aria-hidden="true"></div>
-        <label for="editor-textarea" class="sr-only">Your writing — paste or type here to check it for AI tells</label>
+        <label for="editor-textarea" class="sr-only" data-i18n="editor.textareaLabel">Your writing — paste or type here to check it for AI tells</label>
         <textarea
           id="editor-textarea"
           class="editor-surface editor-textarea"
           spellcheck="true"
           autocapitalize="sentences"
+          data-i18n-placeholder="editor.placeholder"
           placeholder="Paste or type your writing here..."
         ></textarea>
       </div>
       <div class="editor-footer-hint">
-        <span>Marks show what unslop flagged. Hover or tab to a mark for details.</span>
-        <span><kbd>Tab</kbd> into the text, then <kbd>Tab</kbd> through marks</span>
+        <span data-i18n="editor.hintMarks">Marks show what unslop flagged. Hover or tab to a mark for details.</span>
+        <span id="editor-hint-tabbing"><kbd>Tab</kbd> into the text, then <kbd>Tab</kbd> through marks</span>
       </div>
     </div>
 
-    <section class="results-grid" aria-label="Results">
+    <section class="results-grid" aria-label="Results" data-i18n-aria="results.ariaLabel">
       <div class="score-card" id="score-card" data-verdict="good">
-        <p class="score-eyebrow">AI-tell score</p>
-        <p class="score-number" aria-hidden="true"><span id="score-number">0.0</span><span class="unit">/1k words</span></p>
+        <p class="score-eyebrow" data-i18n="score.eyebrow">AI-tell score</p>
+        <p class="score-number" aria-hidden="true"><span id="score-number">0.0</span><span class="unit" data-i18n="score.unit">/1k words</span></p>
         <p class="score-verdict" id="score-verdict-pill" aria-hidden="true">
           <svg id="verdict-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 12.5l5 5L20 6.5"/>
@@ -127,15 +175,15 @@
         </p>
         <p class="sr-only" role="status" aria-live="polite" id="score-live"></p>
         <div class="score-meta">
-          <div class="score-meta-row"><span>Words</span><span id="meta-words">0</span></div>
-          <div class="score-meta-row"><span>Em dashes</span><span id="meta-emdash">0</span></div>
-          <div class="score-meta-row"><span>Emoji</span><span id="meta-emoji">0</span></div>
-          <div class="score-meta-row"><span>Sentence rhythm</span><span id="meta-rhythm">—</span></div>
+          <div class="score-meta-row"><span data-i18n="score.meta.words">Words</span><span id="meta-words">0</span></div>
+          <div class="score-meta-row"><span data-i18n="score.meta.emdash">Em dashes</span><span id="meta-emdash">0</span></div>
+          <div class="score-meta-row"><span data-i18n="score.meta.emoji">Emoji</span><span id="meta-emoji">0</span></div>
+          <div class="score-meta-row"><span data-i18n="score.meta.rhythm">Sentence rhythm</span><span id="meta-rhythm">—</span></div>
         </div>
       </div>
 
       <div class="breakdown" id="breakdown">
-        <h2>Breakdown</h2>
+        <h2 data-i18n="breakdown.heading">Breakdown</h2>
         <div id="breakdown-body">
           <!-- populated by app.js -->
         </div>
@@ -144,34 +192,34 @@
 
     <details class="explainer" id="explainer">
       <summary>
-        What it checks
+        <span data-i18n="explainer.summary">What it checks</span>
         <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </summary>
       <div class="explainer-body">
         <dl>
-          <dt><span class="swatch swatch-buzzword" aria-hidden="true"></span>Buzzwords</dt>
-          <dd>Certain words show up in machine writing at a rate way past normal speech. One on its own means nothing. A cluster of them in one paragraph is the tell.</dd>
+          <dt><span class="swatch swatch-buzzword" aria-hidden="true"></span><span data-i18n="explainer.buzzword.term">Buzzwords</span></dt>
+          <dd data-i18n="explainer.buzzword.def">Certain words show up in machine writing at a rate way past normal speech. One on its own means nothing. A cluster of them in one paragraph is the tell.</dd>
 
-          <dt><span class="swatch swatch-phrase" aria-hidden="true"></span>Filler phrases</dt>
-          <dd>Stock openers and closers a model falls back on: a throat-clearing lead-in, a chipper offer to help at the end, an announcement before diving into the topic. They pad the word count without adding anything.</dd>
+          <dt><span class="swatch swatch-phrase" aria-hidden="true"></span><span data-i18n="explainer.phrase.term">Filler phrases</span></dt>
+          <dd data-i18n="explainer.phrase.def">Stock openers and closers a model falls back on: a throat-clearing lead-in, a chipper offer to help at the end, an announcement before diving into the topic. They pad the word count without adding anything.</dd>
 
-          <dt><span class="swatch swatch-construction" aria-hidden="true"></span>Constructions</dt>
-          <dd>Sentence shapes, not single words: setting up a contrast between two things just to land on the second one, restating a fact by first denying its opposite, and opening with a question purely as a hook instead of getting to the point.</dd>
+          <dt><span class="swatch swatch-construction" aria-hidden="true"></span><span data-i18n="explainer.construction.term">Constructions</span></dt>
+          <dd data-i18n="explainer.construction.def">Sentence shapes, not single words: setting up a contrast between two things just to land on the second one, restating a fact by first denying its opposite, and opening with a question purely as a hook instead of getting to the point.</dd>
 
-          <dt><span class="swatch swatch-hedge" aria-hidden="true"></span>Hedges</dt>
-          <dd>Words like <em>can</em>, <em>often</em>, and <em>typically</em>, stacked up in one stretch of text. Not scored on its own, but worth a look. Too many hedges in a row reads evasive.</dd>
+          <dt><span class="swatch swatch-hedge" aria-hidden="true"></span><span data-i18n="explainer.hedge.term">Hedges</span></dt>
+          <dd data-i18n="explainer.hedge.def">Words like can, often, and typically, stacked up in one stretch of text. Not scored on its own, but worth a look. Too many hedges in a row reads evasive.</dd>
 
-          <dt><span class="swatch swatch-emdash" aria-hidden="true"></span>Em dashes</dt>
-          <dd>An occasional dash is normal punctuation. A pileup of them, one in nearly every sentence, is a habit worth breaking.</dd>
+          <dt><span class="swatch swatch-emdash" aria-hidden="true"></span><span data-i18n="explainer.emdash.term">Em dashes</span></dt>
+          <dd data-i18n="explainer.emdash.def">An occasional dash is normal punctuation. A pileup of them, one in nearly every sentence, is a habit worth breaking.</dd>
 
-          <dt><span class="swatch swatch-emoji" aria-hidden="true"></span>Emoji in prose</dt>
-          <dd>Fine in a text message, out of place in a report, a README, or a cover letter.</dd>
+          <dt><span class="swatch swatch-emoji" aria-hidden="true"></span><span data-i18n="explainer.emoji.term">Emoji in prose</span></dt>
+          <dd data-i18n="explainer.emoji.def">Fine in a text message, out of place in a report, a README, or a cover letter.</dd>
 
-          <dt><span class="swatch swatch-bold-bullet" aria-hidden="true"></span>Bold-label bullets</dt>
-          <dd>A long run of bullets that all follow the same shape: a bolded word, a colon, then a short explanation. One or two is a normal list. Four or five in a row is a template.</dd>
+          <dt><span class="swatch swatch-bold-bullet" aria-hidden="true"></span><span data-i18n="explainer.boldBullet.term">Bold-label bullets</span></dt>
+          <dd data-i18n="explainer.boldBullet.def">A long run of bullets that all follow the same shape: a bolded word, a colon, then a short explanation. One or two is a normal list. Four or five in a row is a template.</dd>
 
-          <dt>Sentence rhythm</dt>
-          <dd>Real writing varies its sentence length without trying to. When every sentence lands within a word or two of the same length, that evenness is its own tell.</dd>
+          <dt data-i18n="explainer.rhythm.term">Sentence rhythm</dt>
+          <dd data-i18n="explainer.rhythm.def">Real writing varies its sentence length without trying to. When every sentence lands within a word or two of the same length, that evenness is its own tell.</dd>
         </dl>
       </div>
     </details>
@@ -179,13 +227,13 @@
 
   <footer class="site-footer">
     <span>
-      Free for noncommercial use; commercial use needs a license.
-      <a href="https://github.com/munzzyy/unslop" target="_blank" rel="noopener noreferrer">Source on GitHub</a>.
-      Prefer the terminal? <code>pipx install git+https://github.com/munzzyy/unslop</code> drops into pre-commit or CI &mdash; same scoring engine as this page.
+      <span data-i18n="footer.license">Free for noncommercial use; commercial use needs a license.</span>
+      <a href="https://github.com/munzzyy/unslop" target="_blank" rel="noopener noreferrer" data-i18n="footer.sourceLinkText">Source on GitHub</a>.
+      <span id="footer-cli-hint"><span data-i18n="footer.cliPrefix">Prefer the terminal? </span><code>pipx install git+https://github.com/munzzyy/unslop</code><span data-i18n="footer.cliSuffix"> drops into pre-commit or CI, same scoring engine as this page.</span></span>
     </span>
     <span class="footer-links">
       <a href="https://github.com/munzzyy/unslop" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <a href="https://github.com/munzzyy/unslop/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+      <a href="https://github.com/munzzyy/unslop/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-i18n="footer.licenseLinkText">License</a>
     </span>
   </footer>
 
@@ -194,6 +242,39 @@
 <div class="mark-tooltip" id="mark-tooltip" role="tooltip"></div>
 
 <script src="detector.js"></script>
+<script src="i18n/en.js"></script>
+<script src="i18n/es.js"></script>
+<script src="i18n/pt-BR.js"></script>
+<script src="i18n/fr.js"></script>
+<script src="i18n/it.js"></script>
+<script src="i18n/de.js"></script>
+<script src="i18n/nl.js"></script>
+<script src="i18n/sv.js"></script>
+<script src="i18n/nb.js"></script>
+<script src="i18n/da.js"></script>
+<script src="i18n/fi.js"></script>
+<script src="i18n/pl.js"></script>
+<script src="i18n/cs.js"></script>
+<script src="i18n/hu.js"></script>
+<script src="i18n/ro.js"></script>
+<script src="i18n/uk.js"></script>
+<script src="i18n/ru.js"></script>
+<script src="i18n/el.js"></script>
+<script src="i18n/tr.js"></script>
+<script src="i18n/id.js"></script>
+<script src="i18n/vi.js"></script>
+<script src="i18n/tl.js"></script>
+<script src="i18n/zh-Hans.js"></script>
+<script src="i18n/zh-Hant.js"></script>
+<script src="i18n/ja.js"></script>
+<script src="i18n/ko.js"></script>
+<script src="i18n/hi.js"></script>
+<script src="i18n/bn.js"></script>
+<script src="i18n/th.js"></script>
+<script src="i18n/ar.js"></script>
+<script src="i18n/he.js"></script>
+<script src="i18n/fa.js"></script>
+<script src="i18n/registry.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

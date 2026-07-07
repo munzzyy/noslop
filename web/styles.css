@@ -504,7 +504,7 @@ a:hover { color: var(--accent); }
 /* skip link */
 .skip-link {
   position: absolute;
-  left: 1rem;
+  inset-inline-start: 1rem;
   top: -3rem;
   background: var(--paper-raised);
   color: var(--ink);
@@ -560,6 +560,7 @@ a:hover { color: var(--accent); }
 
 .header-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
@@ -611,7 +612,7 @@ a:hover { color: var(--accent); }
   font-weight: 500;
   height: 100%;
   max-width: 128px;
-  padding-right: 1.1rem;
+  padding-inline-end: 1.1rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -623,9 +624,17 @@ a:hover { color: var(--accent); }
   outline: none;
 }
 
+/* Language autonyms (e.g. "Português (Brasil)", "Bahasa Indonesia") run
+   longer than any theme name - both language pickers share .theme-picker's
+   pill chrome but need more room before ellipsis kicks in. */
+.uilang-select,
+.text-lang-select {
+  max-width: 172px;
+}
+
 .theme-picker-chevron {
   position: absolute;
-  right: 0.6rem;
+  inset-inline-end: 0.6rem;
   top: 50%;
   transform: translateY(-50%);
   width: 13px;
@@ -746,6 +755,38 @@ a:hover { color: var(--accent); }
   font-size: 0.85rem;
   color: var(--ink-faint);
   white-space: nowrap;
+}
+
+/* ---------- text-language bar ----------
+   Forces what the pasted TEXT is scored as (separate from the UI-language
+   picker in the header). .text-lang-picker reuses .theme-picker's pill
+   chrome (same class applied in index.html) so it needs no chrome of its
+   own here - just the row layout and the honest fallback-hint line, shown
+   only when auto-detect couldn't match a pack. */
+
+.text-lang-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+  margin: 0 0 0.9rem;
+}
+
+/* --warn-tint's own contrast against --paper-raised (a card surface) was
+   verified for the existing verdict pill/stat-tile uses, but this bar sits
+   directly on bare --paper (outside any card) - the tint alone reads as
+   near-invisible there (same luminance-vs-hue trap as the mark-highlight
+   chips, see CONTRIBUTING.md), so a full-strength --warn border does the
+   job a color-mix border can't quite reach against every theme's --paper. */
+.text-lang-fallback-hint {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: var(--warn-tint);
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  font-size: 0.82rem;
 }
 
 /* ---------- editor + backdrop overlay ---------- */
@@ -933,7 +974,7 @@ kbd {
   font-size: 1.15rem;
   font-weight: 500;
   color: var(--ink-faint);
-  margin-left: 0.3rem;
+  margin-inline-start: 0.3rem;
   letter-spacing: normal;
 }
 
@@ -1154,7 +1195,7 @@ kbd {
   height: 16px;
   stroke: var(--ink-soft);
   transition: transform var(--dur-fast) var(--ease);
-  margin-left: auto;
+  margin-inline-start: auto;
   flex-shrink: 0;
 }
 .explainer[open] summary .chevron { transform: rotate(180deg); }
