@@ -33,6 +33,8 @@ Either way, the agent gets [SKILL.md](skills/unslop/SKILL.md): what to run, how 
 
 [munzzyy.github.io/unslop](https://munzzyy.github.io/unslop/) is the whole tool as a single page. Paste or type, and every buzzword, filler phrase, construction, stray em dash, and emoji gets underlined in place, with a live score and a breakdown of exactly what tripped it. No build step, no account, no server: the page loads the same scorer the CLI uses and runs it on your machine. You can save the page and use it offline.
 
+Nine themes from the header - Paper and Ink, plus Terminal, Sepia, Newsprint, Midnight, both Solarized variants, and a high-contrast mode. Auto follows your system by default; your pick is remembered and applied before the page paints.
+
 [![the light theme, showing the score and the per-finding breakdown](docs/media/app-full-light.png)](https://munzzyy.github.io/unslop/)
 
 > Looking for a package literally named `unslop` on PyPI or npm? Those are different projects - an LLM-based rewriter and an old code-quality tool. This one's git-only for now; see [Install](#install).
