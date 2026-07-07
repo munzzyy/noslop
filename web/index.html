@@ -6,6 +6,7 @@
 <title>unslop — flag the AI tells in your writing</title>
 <meta name="description" content="Paste your writing and see what makes it read like a robot, so you can fix it before you send it. Runs entirely in your browser — nothing is uploaded." />
 <meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#f4efe6" id="theme-color-meta" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="stylesheet" href="styles.css" />
@@ -26,16 +27,28 @@
         unslop
       </span>
       <div class="header-actions">
-        <button type="button" class="icon-button" id="theme-toggle" aria-pressed="false">
-          <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="4.2"/>
-            <path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/>
+        <div class="theme-picker">
+          <svg class="theme-picker-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="12" height="12" rx="3" transform="rotate(-8 9 9)"/>
+            <rect x="9" y="9" width="12" height="12" rx="3"/>
           </svg>
-          <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"/>
+          <label for="theme-select" class="sr-only">Theme</label>
+          <select id="theme-select" class="theme-select">
+            <option value="auto">Auto</option>
+            <option value="light">Paper</option>
+            <option value="dark">Ink</option>
+            <option value="terminal">Terminal</option>
+            <option value="sepia">Sepia</option>
+            <option value="newsprint">Newsprint</option>
+            <option value="midnight">Midnight</option>
+            <option value="solarized-light">Solarized Light</option>
+            <option value="solarized-dark">Solarized Dark</option>
+            <option value="contrast">High Contrast</option>
+          </select>
+          <svg class="theme-picker-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
           </svg>
-          <span class="sr-only" id="theme-toggle-label">Switch to dark theme</span>
-        </button>
+        </div>
       </div>
     </div>
 

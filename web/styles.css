@@ -16,7 +16,16 @@
 
   --measure: 68ch;
 
-  /* light palette — warm near-white paper, deep ink, one accent */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --dur-fast: 120ms;
+  --dur-med: 220ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Paper — warm near-white paper, deep ink, one burnt-orange accent.
+     This is the un-attributed default: no data-theme means this block. */
   --paper: #f4efe6;
   --paper-raised: #fbf8f2;
   --ink: #20211f;
@@ -24,9 +33,10 @@
   --ink-faint: #635f59;
   --line: #ddd6c8;
   --line-soft: #e9e3d6;
-  --accent: #ad5a26;
+  --accent: #a85725;
   --accent-ink: #7a3f1a;
   --accent-tint: #f1e2d3;
+  --accent-on: #fff8f0;
 
   --good: #376b45;
   --good-tint: #e3efe3;
@@ -37,32 +47,27 @@
 
   --focus-ring: #2f6fb0;
 
-  /* category marks — muted highlighter set, tuned for AA text contrast (>=4.5:1) on the ink shown below */
-  --mark-phrase: #d9c58a;
-  --mark-phrase-ink: #5c4d15;
-  --mark-buzzword: #cd9e6f;
-  --mark-buzzword-ink: #43290d;
-  --mark-construction: #c78a9a;
-  --mark-construction-ink: #451c27;
-  --mark-hedge: #b9c4a8;
-  --mark-hedge-ink: #3d4630;
-  --mark-emoji: #9fbfc7;
-  --mark-emoji-ink: #1f4650;
-  --mark-emdash: #a9aec9;
-  --mark-emdash-ink: #2c2f52;
-  --mark-bold-bullet: #cbb6d6;
-  --mark-bold-bullet-ink: #4a2c56;
+  /* category marks — every pair below is verified >=4.5:1 text-on-chip and
+     the chip itself >=3:1 against --paper-raised (see CONTRIBUTING.md) */
+  --mark-phrase: #aa8c31;
+  --mark-phrase-ink: #31280e;
+  --mark-buzzword: #c67b39;
+  --mark-buzzword-ink: #362110;
+  --mark-construction: #bf4075;
+  --mark-construction-ink: #faf1f5;
+  --mark-hedge: #769b43;
+  --mark-hedge-ink: #222d13;
+  --mark-emoji: #419caa;
+  --mark-emoji-ink: #132d32;
+  --mark-emdash: #465db9;
+  --mark-emdash-ink: #dce0f2;
+  --mark-bold-bullet: #9346b9;
+  --mark-bold-bullet-ink: #f0e5f5;
 
   --shadow-card: 0 1px 2px rgba(32, 33, 31, 0.06), 0 4px 16px rgba(32, 33, 31, 0.06);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-
-  --dur-fast: 120ms;
-  --dur-med: 220ms;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* Auto (no stored choice) follows the OS: Paper by day, Ink by night. */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
@@ -76,6 +81,7 @@
     --accent: #e08a52;
     --accent-ink: #f2b587;
     --accent-tint: #3a2a1c;
+    --accent-on: #0d0702;
 
     --good: #7fc491;
     --good-tint: #223226;
@@ -86,26 +92,28 @@
 
     --focus-ring: #7db3e8;
 
-    --mark-phrase: #6b5d2c;
-    --mark-phrase-ink: #f0e2ab;
-    --mark-buzzword: #6b4a26;
-    --mark-buzzword-ink: #f0cda3;
-    --mark-construction: #6b3a48;
-    --mark-construction-ink: #f0c1cf;
-    --mark-hedge: #4a5539;
-    --mark-hedge-ink: #d3e0bf;
-    --mark-emoji: #2f5860;
-    --mark-emoji-ink: #b9e2ea;
-    --mark-emdash: #3d4270;
-    --mark-emdash-ink: #ccd0f0;
-    --mark-bold-bullet: #4d3956;
-    --mark-bold-bullet-ink: #e6cdf0;
+    --mark-phrase: #cca633;
+    --mark-phrase-ink: #4d3e13;
+    --mark-buzzword: #cc7a33;
+    --mark-buzzword-ink: #39220e;
+    --mark-construction: #c63974;
+    --mark-construction-ink: #fbf2f6;
+    --mark-hedge: #89b946;
+    --mark-hedge-ink: #33451a;
+    --mark-emoji: #40aebf;
+    --mark-emoji-ink: #163d43;
+    --mark-emdash: #4f67c4;
+    --mark-emdash-ink: #edeff9;
+    --mark-bold-bullet: #9a49c2;
+    --mark-bold-bullet-ink: #f6eef9;
 
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.3);
   }
 }
 
-/* manual override wins over the media query either direction */
+/* An explicit data-theme always wins over the media query, either direction. */
+
+/* ----- Paper (light) — the default, explicit ----- */
 :root[data-theme="light"] {
   color-scheme: light;
   --paper: #f4efe6;
@@ -115,9 +123,10 @@
   --ink-faint: #635f59;
   --line: #ddd6c8;
   --line-soft: #e9e3d6;
-  --accent: #ad5a26;
+  --accent: #a85725;
   --accent-ink: #7a3f1a;
   --accent-tint: #f1e2d3;
+  --accent-on: #fff8f0;
   --good: #376b45;
   --good-tint: #e3efe3;
   --warn: #83560f;
@@ -125,23 +134,24 @@
   --bad: #b23b2f;
   --bad-tint: #f6e3df;
   --focus-ring: #2f6fb0;
-  --mark-phrase: #d9c58a;
-  --mark-phrase-ink: #5c4d15;
-  --mark-buzzword: #cd9e6f;
-  --mark-buzzword-ink: #43290d;
-  --mark-construction: #c78a9a;
-  --mark-construction-ink: #451c27;
-  --mark-hedge: #b9c4a8;
-  --mark-hedge-ink: #3d4630;
-  --mark-emoji: #9fbfc7;
-  --mark-emoji-ink: #1f4650;
-  --mark-emdash: #a9aec9;
-  --mark-emdash-ink: #2c2f52;
-  --mark-bold-bullet: #cbb6d6;
-  --mark-bold-bullet-ink: #4a2c56;
+  --mark-phrase: #aa8c31;
+  --mark-phrase-ink: #31280e;
+  --mark-buzzword: #c67b39;
+  --mark-buzzword-ink: #362110;
+  --mark-construction: #bf4075;
+  --mark-construction-ink: #faf1f5;
+  --mark-hedge: #769b43;
+  --mark-hedge-ink: #222d13;
+  --mark-emoji: #419caa;
+  --mark-emoji-ink: #132d32;
+  --mark-emdash: #465db9;
+  --mark-emdash-ink: #dce0f2;
+  --mark-bold-bullet: #9346b9;
+  --mark-bold-bullet-ink: #f0e5f5;
   --shadow-card: 0 1px 2px rgba(32, 33, 31, 0.06), 0 4px 16px rgba(32, 33, 31, 0.06);
 }
 
+/* ----- Ink (dark) — the default's dark twin, explicit ----- */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --paper: #1c1c1a;
@@ -154,6 +164,7 @@
   --accent: #e08a52;
   --accent-ink: #f2b587;
   --accent-tint: #3a2a1c;
+  --accent-on: #0d0702;
   --good: #7fc491;
   --good-tint: #223226;
   --warn: #e0b85a;
@@ -161,21 +172,290 @@
   --bad: #e6867a;
   --bad-tint: #3a2320;
   --focus-ring: #7db3e8;
-  --mark-phrase: #6b5d2c;
-  --mark-phrase-ink: #f0e2ab;
-  --mark-buzzword: #6b4a26;
-  --mark-buzzword-ink: #f0cda3;
-  --mark-construction: #6b3a48;
-  --mark-construction-ink: #f0c1cf;
-  --mark-hedge: #4a5539;
-  --mark-hedge-ink: #d3e0bf;
-  --mark-emoji: #2f5860;
-  --mark-emoji-ink: #b9e2ea;
-  --mark-emdash: #3d4270;
-  --mark-emdash-ink: #ccd0f0;
-  --mark-bold-bullet: #4d3956;
-  --mark-bold-bullet-ink: #e6cdf0;
+  --mark-phrase: #cca633;
+  --mark-phrase-ink: #4d3e13;
+  --mark-buzzword: #cc7a33;
+  --mark-buzzword-ink: #39220e;
+  --mark-construction: #c63974;
+  --mark-construction-ink: #fbf2f6;
+  --mark-hedge: #89b946;
+  --mark-hedge-ink: #33451a;
+  --mark-emoji: #40aebf;
+  --mark-emoji-ink: #163d43;
+  --mark-emdash: #4f67c4;
+  --mark-emdash-ink: #edeff9;
+  --mark-bold-bullet: #9a49c2;
+  --mark-bold-bullet-ink: #f6eef9;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* ----- Terminal (dark) — phosphor green on a near-black CRT ----- */
+:root[data-theme="terminal"] {
+  color-scheme: dark;
+  --paper: #0a100c;
+  --paper-raised: #10180f;
+  --ink: #a6f0b6;
+  --ink-soft: #7fd694;
+  --ink-faint: #5c9a6c;
+  --line: #1e3322;
+  --line-soft: #162619;
+  --accent: #4be07a;
+  --accent-ink: #8ff2ab;
+  --accent-tint: #123018;
+  --accent-on: #020d06;
+  --good: #57e07f;
+  --good-tint: #14301c;
+  --warn: #e0c94a;
+  --warn-tint: #332c12;
+  --bad: #e0645a;
+  --bad-tint: #331714;
+  --focus-ring: #5fd0e0;
+  --mark-phrase: #d2a92d;
+  --mark-phrase-ink: #504011;
+  --mark-buzzword: #d97126;
+  --mark-buzzword-ink: #3c1f0b;
+  --mark-construction: #cc3399;
+  --mark-construction-ink: #000000;
+  --mark-hedge: #97c639;
+  --mark-hedge-ink: #3c4e17;
+  --mark-emoji: #33ccbf;
+  --mark-emoji-ink: #14514c;
+  --mark-emdash: #3968c6;
+  --mark-emdash-ink: #e7edf8;
+  --mark-bold-bullet: #8b39c6;
+  --mark-bold-bullet-ink: #e9daf4;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ----- Sepia (light) — antique manuscript, oxblood accent ----- */
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  --paper: #ecdcb8;
+  --paper-raised: #f6ecd6;
+  --ink: #3a2a15;
+  --ink-soft: #5c4a30;
+  --ink-faint: #6f5f43;
+  --line: #d3ba8a;
+  --line-soft: #e2cca0;
+  --accent: #8a4a1f;
+  --accent-ink: #6b3a18;
+  --accent-tint: #ecdcc4;
+  --accent-on: #fdf3e4;
+  --good: #4d6b2a;
+  --good-tint: #e2e6ca;
+  --warn: #81630f;
+  --warn-tint: #f0e6c4;
+  --bad: #9c2b24;
+  --bad-tint: #f0d6d0;
+  --focus-ring: #2f5f8a;
+  --mark-phrase: #a3843e;
+  --mark-phrase-ink: #28200f;
+  --mark-buzzword: #b96c46;
+  --mark-buzzword-ink: #22140d;
+  --mark-construction: #ac5362;
+  --mark-construction-ink: #f8f1f2;
+  --mark-hedge: #7a8f4a;
+  --mark-hedge-ink: #1d2212;
+  --mark-emoji: #4f948e;
+  --mark-emoji-ink: #142524;
+  --mark-emdash: #5960a6;
+  --mark-emdash-ink: #e2e3ef;
+  --mark-bold-bullet: #9b57a8;
+  --mark-bold-bullet-ink: #f9f5fa;
+  --shadow-card: 0 1px 2px rgba(58, 42, 21, 0.08), 0 4px 16px rgba(58, 42, 21, 0.08);
+}
+
+/* ----- Newsprint (light) — grayscale broadsheet, one masthead red ----- */
+:root[data-theme="newsprint"] {
+  color-scheme: light;
+  --paper: #e9e6de;
+  --paper-raised: #f4f2ea;
+  --ink: #1a1a1a;
+  --ink-soft: #45443f;
+  --ink-faint: #696760;
+  --line: #c7c3b6;
+  --line-soft: #dcd8cb;
+  --accent: #a52822;
+  --accent-ink: #7c1e19;
+  --accent-tint: #ecd9d6;
+  --accent-on: #fbf1ee;
+  --good: #3f6b3f;
+  --good-tint: #dde6da;
+  --warn: #7a5c12;
+  --warn-tint: #ede4cc;
+  --bad: #a52822;
+  --bad-tint: #ecd9d6;
+  --focus-ring: #2b5c86;
+  --mark-phrase: #9e8a59;
+  --mark-phrase-ink: #2b2518;
+  --mark-buzzword: #a67359;
+  --mark-buzzword-ink: #1d140f;
+  --mark-construction: #9f606a;
+  --mark-construction-ink: #faf7f7;
+  --mark-hedge: #82925d;
+  --mark-hedge-ink: #232719;
+  --mark-emoji: #63929c;
+  --mark-emoji-ink: #1a2628;
+  --mark-emdash: #606a9f;
+  --mark-emdash-ink: #eeeff5;
+  --mark-bold-bullet: #8f609f;
+  --mark-bold-bullet-ink: #f9f6fa;
+  --shadow-card: 0 1px 2px rgba(26, 26, 26, 0.07), 0 4px 16px rgba(26, 26, 26, 0.07);
+}
+
+/* ----- Midnight (dark) — cool slate-blue, code-editor-at-night ----- */
+:root[data-theme="midnight"] {
+  color-scheme: dark;
+  --paper: #0f1420;
+  --paper-raised: #161d2c;
+  --ink: #e2e6f0;
+  --ink-soft: #a7b0c5;
+  --ink-faint: #7a83a6;
+  --line: #29324a;
+  --line-soft: #1d2436;
+  --accent: #5b9df0;
+  --accent-ink: #8fc4f5;
+  --accent-tint: #172a42;
+  --accent-on: #01070e;
+  --good: #6fd694;
+  --good-tint: #16302a;
+  --warn: #e8c15a;
+  --warn-tint: #362c14;
+  --bad: #f28080;
+  --bad-tint: #3a2020;
+  --focus-ring: #f0b34a;
+  --mark-phrase: #cca633;
+  --mark-phrase-ink: #4d3e13;
+  --mark-buzzword: #d2852d;
+  --mark-buzzword-ink: #422a0e;
+  --mark-construction: #c63980;
+  --mark-construction-ink: #fcf4f8;
+  --mark-hedge: #46b976;
+  --mark-hedge-ink: #19432a;
+  --mark-emoji: #39aec6;
+  --mark-emoji-ink: #143d46;
+  --mark-emdash: #7f4dc4;
+  --mark-emdash-ink: #ece4f6;
+  --mark-bold-bullet: #bf40aa;
+  --mark-bold-bullet-ink: #010001;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ----- Solarized Light — Ethan Schoonover's palette, retuned a shade
+   darker on the muted tokens where the canonical hex fell short of AA ----- */
+:root[data-theme="solarized-light"] {
+  color-scheme: light;
+  --paper: #eee8d5;
+  --paper-raised: #fdf6e3;
+  --ink: #323e42;
+  --ink-soft: #445359;
+  --ink-faint: #566466;
+  --line: #d5cdb3;
+  --line-soft: #e4dec8;
+  --accent: #1e6da5;
+  --accent-ink: #1c6ca8;
+  --accent-tint: #e3edf3;
+  --accent-on: #f8fafc;
+  --good: #5b7100;
+  --good-tint: #e7ecd2;
+  --warn: #896000;
+  --warn-tint: #f0e6c8;
+  --bad: #bb3026;
+  --bad-tint: #f5dcd8;
+  --focus-ring: #6c71c4;
+  --mark-phrase: #b18914;
+  --mark-phrase-ink: #322706;
+  --mark-buzzword: #df5320;
+  --mark-buzzword-ink: #2d1106;
+  --mark-construction: #c6397d;
+  --mark-construction-ink: #fcf3f7;
+  --mark-hedge: #85961a;
+  --mark-hedge-ink: #252a07;
+  --mark-emoji: #289f95;
+  --mark-emoji-ink: #0b2e2b;
+  --mark-emdash: #338ccc;
+  --mark-emdash-ink: #0c2130;
+  --mark-bold-bullet: #6c46b9;
+  --mark-bold-bullet-ink: #dbd2ee;
+  --shadow-card: 0 1px 2px rgba(0, 43, 54, 0.08), 0 4px 16px rgba(0, 43, 54, 0.08);
+}
+
+/* ----- Solarized Dark — same family, retuned a shade brighter on the
+   muted tokens for the same reason ----- */
+:root[data-theme="solarized-dark"] {
+  color-scheme: dark;
+  --paper: #002b36;
+  --paper-raised: #073642;
+  --ink: #d2d8d8;
+  --ink-soft: #afbabb;
+  --ink-faint: #91a4aa;
+  --line: #0f4453;
+  --line-soft: #0a3a47;
+  --accent: #4fa8e6;
+  --accent-ink: #7dc4f0;
+  --accent-tint: #0d3040;
+  --accent-on: #02090d;
+  --good: #8fc73e;
+  --good-tint: #16281a;
+  --warn: #e0b83e;
+  --warn-tint: #332b14;
+  --bad: #ec746a;
+  --bad-tint: #3a1c18;
+  --focus-ring: #a8a0e8;
+  --mark-phrase: #e6b319;
+  --mark-phrase-ink: #5c470a;
+  --mark-buzzword: #df5320;
+  --mark-buzzword-ink: #2d1106;
+  --mark-construction: #cb4b89;
+  --mark-construction-ink: #1b0811;
+  --mark-hedge: #bcd22d;
+  --mark-hedge-ink: #4b5412;
+  --mark-emoji: #39c6ba;
+  --mark-emoji-ink: #164d49;
+  --mark-emdash: #338ccc;
+  --mark-emdash-ink: #0c2130;
+  --mark-bold-bullet: #8869c6;
+  --mark-bold-bullet-ink: #100a1b;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ----- High Contrast (dark) — max-contrast accessibility mode: pure
+   black/white, vivid saturated marks, black text on every chip ----- */
+:root[data-theme="contrast"] {
+  color-scheme: dark;
+  --paper: #000000;
+  --paper-raised: #0d0d0d;
+  --ink: #ffffff;
+  --ink-soft: #e6e6e6;
+  --ink-faint: #bdbdbd;
+  --line: #8a8a8a;
+  --line-soft: #4a4a4a;
+  --accent: #ffd60a;
+  --accent-ink: #ffe066;
+  --accent-tint: #332b00;
+  --accent-on: #000000;
+  --good: #4ade60;
+  --good-tint: #10280f;
+  --warn: #ffb020;
+  --warn-tint: #332400;
+  --bad: #ff5c5c;
+  --bad-tint: #330d0d;
+  --focus-ring: #66e0ff;
+  --mark-phrase: #ffcc00;
+  --mark-phrase-ink: #665200;
+  --mark-buzzword: #ff7700;
+  --mark-buzzword-ink: #592900;
+  --mark-construction: #ff0080;
+  --mark-construction-ink: #3f0020;
+  --mark-hedge: #95ff00;
+  --mark-hedge-ink: #3c6600;
+  --mark-emoji: #00d4ff;
+  --mark-emoji-ink: #005566;
+  --mark-emdash: #006aff;
+  --mark-emdash-ink: #000001;
+  --mark-bold-bullet: #9213ec;
+  --mark-bold-bullet-ink: #edd9fc;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 /* ---------- reset-ish ---------- */
@@ -252,9 +532,10 @@ a:hover { color: var(--accent); }
 
 .header-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem 1rem;
   margin-bottom: 1.75rem;
 }
 
@@ -283,38 +564,74 @@ a:hover { color: var(--accent); }
   gap: 0.5rem;
 }
 
-.icon-button {
+/* theme picker — a real <select> for native keyboard/touch/screen-reader
+   behavior, dressed up to match the rest of the toolbar chrome. The chevron
+   is a real SVG (not a fixed-color data-URI background) so it recolors with
+   --ink-soft like everything else instead of going invisible in the darker
+   themes. */
+.theme-picker {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
+  gap: 0.4rem;
+  height: 44px;
+  min-width: 44px;
+  padding: 0 0.7rem 0 0.65rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: var(--paper-raised);
   cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
-.icon-button:hover {
+.theme-picker:hover {
   border-color: var(--ink-faint);
   background: var(--line-soft);
 }
-.icon-button:active {
-  transform: scale(0.96);
-}
-.icon-button svg {
-  width: 19px;
-  height: 19px;
-  stroke: var(--ink-soft);
+.theme-picker:focus-within {
+  border-color: var(--focus-ring);
+  outline: 2.5px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
-.theme-icon-dark { display: none; }
-:root[data-theme="dark"] .theme-icon-light { display: none; }
-:root[data-theme="dark"] .theme-icon-dark { display: block; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .theme-icon-light { display: none; }
-  :root:not([data-theme="light"]) .theme-icon-dark { display: block; }
+.theme-picker-icon {
+  width: 17px;
+  height: 17px;
+  stroke: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.theme-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background-color: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  height: 100%;
+  max-width: 128px;
+  padding-right: 1.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Suppress the select's own focus-visible ring; .theme-picker:focus-within
+   already draws one ring around the whole pill so it isn't drawn twice. */
+.theme-select:focus-visible {
+  outline: none;
+}
+
+.theme-picker-chevron {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 13px;
+  stroke: var(--ink-soft);
+  pointer-events: none;
 }
 
 /* ---------- hero ---------- */
@@ -380,6 +697,7 @@ a:hover { color: var(--accent); }
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  min-height: 44px;
   padding: 0.5rem 0.9rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
@@ -409,7 +727,7 @@ a:hover { color: var(--accent); }
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff8f0;
+  color: var(--accent-on);
 }
 .btn-primary:hover {
   background: var(--accent-ink);
@@ -479,9 +797,17 @@ a:hover { color: var(--accent); }
   cursor: help;
   pointer-events: auto;
 }
-.editor-backdrop mark:focus-visible,
 .editor-backdrop mark:hover {
   outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+/* currentColor is tuned for contrast *inside* the chip, not against the page
+   behind it — a near-black mark ink on a near-black theme would draw a
+   near-invisible ring. --focus-ring is verified against every surface, so
+   keyboard focus always gets a real, visible ring regardless of the mark's
+   own color. */
+.editor-backdrop mark:focus-visible {
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -533,9 +859,10 @@ mark.m-bold-bullet { background: var(--mark-bold-bullet); color: var(--mark-bold
 
 .editor-footer-hint {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.35rem 0.75rem;
   padding: 0.6rem 1.1rem;
   border-top: 1px solid var(--line-soft);
   background: var(--paper);

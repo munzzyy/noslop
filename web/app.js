@@ -29,8 +29,8 @@
   var metaRhythm = document.getElementById("meta-rhythm");
   var breakdownBody = document.getElementById("breakdown-body");
   var tooltip = document.getElementById("mark-tooltip");
-  var themeToggle = document.getElementById("theme-toggle");
-  var themeToggleLabel = document.getElementById("theme-toggle-label");
+  var themeSelect = document.getElementById("theme-select");
+  var themeColorMeta = document.getElementById("theme-color-meta");
 
   var btnSampleHeavy = document.getElementById("btn-sample-heavy");
   var btnSampleSubtle = document.getElementById("btn-sample-subtle");
@@ -92,18 +92,32 @@
     "Just grab fifteen minutes.";
 
   // ---------- theme ----------
+  // "auto" (no data-theme attribute) follows prefers-color-scheme between
+  // Paper and Ink, same as before. Every other id names a fixed palette in
+  // styles.css; THEMES is the allow-list so a stale/mistyped value (an old
+  // bookmark, a hand-edited URL) falls back to auto instead of applying no
+  // styling at all.
+  var THEMES = [
+    "light", "dark", "terminal", "sepia", "newsprint", "midnight",
+    "solarized-light", "solarized-dark", "contrast"
+  ];
 
   function applyTheme(mode) {
     var root = document.documentElement;
-    if (mode === "light" || mode === "dark") {
+    if (THEMES.indexOf(mode) !== -1) {
       root.setAttribute("data-theme", mode);
     } else {
+      mode = "auto";
       root.removeAttribute("data-theme");
     }
-    var isDark = mode === "dark" ||
-      (mode !== "light" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    themeToggle.setAttribute("aria-pressed", isDark ? "true" : "false");
-    themeToggleLabel.textContent = isDark ? "Switch to light theme" : "Switch to dark theme";
+    themeSelect.value = mode;
+    // Keep the browser-chrome color (address bar, task switcher) tracking
+    // whichever theme just took effect. Reading the custom property back
+    // after setting the attribute picks up the auto/media-query case too.
+    if (themeColorMeta) {
+      var paper = getComputedStyle(root).getPropertyValue("--paper").trim();
+      if (paper) themeColorMeta.setAttribute("content", paper);
+    }
   }
 
   function initTheme() {
@@ -116,20 +130,27 @@
     applyTheme(saved);
   }
 
-  function toggleTheme() {
-    var current = document.documentElement.getAttribute("data-theme");
-    var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var currentlyDark = current === "dark" || (!current && systemDark);
-    var next = currentlyDark ? "light" : "dark";
+  themeSelect.addEventListener("change", function () {
+    var next = themeSelect.value;
     applyTheme(next);
     try {
-      localStorage.setItem(THEME_KEY, next);
+      if (next === "auto") localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, next);
     } catch (_e) {
       /* ignore */
     }
+  });
+
+  // Auto mode should keep tracking the OS if it flips light/dark mid-session.
+  if (window.matchMedia) {
+    var systemSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    var resyncIfAuto = function () {
+      if (!document.documentElement.hasAttribute("data-theme")) applyTheme(null);
+    };
+    if (systemSchemeQuery.addEventListener) systemSchemeQuery.addEventListener("change", resyncIfAuto);
+    else if (systemSchemeQuery.addListener) systemSchemeQuery.addListener(resyncIfAuto); // Safari < 14
   }
 
-  themeToggle.addEventListener("click", toggleTheme);
   initTheme();
 
   // ---------- html escaping for the backdrop ----------
@@ -200,7 +221,14 @@
 
     var rect = mark.getBoundingClientRect();
     var top = rect.top - 10;
-    var left = rect.left + rect.width / 2;
+    var center = rect.left + rect.width / 2;
+    // Tooltip is horizontally centered on the mark via translateX(-50%), so
+    // clamp the center point itself (not just the eventual box) to keep it
+    // on-screen for marks near the left/right edge on a narrow viewport.
+    var halfWidth = tooltip.offsetWidth / 2;
+    var minCenter = 8 + halfWidth;
+    var maxCenter = window.innerWidth - 8 - halfWidth;
+    var left = Math.min(Math.max(center, minCenter), maxCenter);
     tooltip.style.top = Math.max(8, top) + "px";
     tooltip.style.left = left + "px";
     tooltip.style.transform = "translate(-50%, -100%)";
@@ -534,16 +562,20 @@
   }
 
   // ---------- url-driven demo state (shareable / deep-linkable) ----------
-  // ?sample=heavy|subtle preloads an example and ?theme=dark|light forces a
-  // theme, so a link can drop someone straight onto the tool already showing
-  // what it does. Falls back silently if the URL can't be parsed.
+  // ?sample=heavy|subtle preloads an example and ?theme=<id>|auto forces a
+  // theme (any id from THEMES, e.g. ?theme=solarized-dark), so a link can
+  // drop someone straight onto the tool already showing what it does.
+  // Falls back silently if the URL can't be parsed.
   (function applyUrlState() {
     var params;
     try { params = new URLSearchParams(window.location.search); } catch (_e) { return; }
     var theme = params.get("theme");
-    if (theme === "dark" || theme === "light") {
+    if (theme === "auto" || THEMES.indexOf(theme) !== -1) {
       applyTheme(theme);
-      try { localStorage.setItem(THEME_KEY, theme); } catch (_e2) { /* ignore */ }
+      try {
+        if (theme === "auto") localStorage.removeItem(THEME_KEY);
+        else localStorage.setItem(THEME_KEY, theme);
+      } catch (_e2) { /* ignore */ }
     }
     var sample = params.get("sample");
     if (sample === "heavy") textarea.value = SAMPLE_HEAVY;
