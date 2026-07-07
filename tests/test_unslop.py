@@ -416,3 +416,98 @@ def test_rdjson_cli_flag_outputs_valid_jsonlines():
         assert len(lines) >= 1
         for line in lines:
             json.loads(line)
+
+
+# ---- language packs ----
+
+def test_spanish_slop_is_detected_and_flagged():
+    r = unslop.analyze(
+        "En el vasto mundo del desarrollo, es importante destacar que nuestra "
+        "plataforma integral ofrece una experiencia fluida y sin fisuras. "
+        "Sumérgete en un rico tapiz de posibilidades que te permitirá "
+        "desbloquear todo tu potencial en el panorama digital actual."
+    )
+    assert r["language"] == "es"
+    assert r["language_source"] == "detected"
+    assert r["score_per_1k"] >= 25
+    assert any(w == "tapiz" for w, _, _ in r["buzzwords"])
+    assert any(p == "es importante destacar" for p, _, _ in r["phrases"])
+
+
+def test_german_slop_is_detected_and_flagged():
+    r = unslop.analyze(
+        "In der heutigen schnelllebigen Welt ist es wichtig zu beachten, dass "
+        "unsere nahtlose Plattform bahnbrechende Synergien nutzt, um ein "
+        "ganzheitliches Erlebnis zu bieten und Ihr volles Potenzial zu "
+        "entfesseln. Das ist nicht nur ein Werkzeug, sondern ein echter "
+        "Paradigmenwechsel für die Arbeit von morgen."
+    )
+    assert r["language"] == "de"
+    assert r["score_per_1k"] >= 25
+    assert any(w == "nahtlose" for w, _, _ in r["buzzwords"])
+    assert any("sondern" in label for label, _, _, _, _ in r["patterns"])
+
+
+def test_clean_spanish_reads_human():
+    r = unslop.analyze(
+        "Ayer se me rompió la cadena de la bici camino al trabajo. La arreglé "
+        "con la herramienta que llevo años cargando sin usar. Tardé veinte "
+        "minutos y llegué con las manos llenas de grasa, pero llegué a tiempo "
+        "y nadie se dio cuenta de nada en la oficina."
+    )
+    assert r["language"] == "es"
+    assert r["verdict"] == "looks human"
+
+
+def test_unknown_language_falls_back_honestly():
+    r = unslop.analyze(
+        "Вчера сломалась цепь на велосипеде по дороге на работу. Починил её "
+        "выжимкой, которую вожу с собой уже много лет и ни разу не использовал. "
+        "Потратил двадцать минут и приехал с чёрными от смазки руками."
+    )
+    assert r["language"] == "en"
+    assert r["language_source"] == "fallback"
+    # the Unicode tokenizer still counts these words, so per-1k math stays sane
+    assert r["words"] > 15
+
+
+def test_forced_lang_overrides_detection():
+    r = unslop.analyze(
+        "The quick brown fox jumps over the lazy dog again and again today.",
+        lang="es",
+    )
+    assert r["language"] == "es"
+    assert r["language_source"] == "forced"
+
+
+def test_dialogue_dashes_not_flagged_in_spanish():
+    dialogue = (
+        "—¿Vienes mañana a la obra? —preguntó Ana desde la puerta.\n"
+        "—No lo sé —dijo Pedro—. El tren sale temprano y la reunión con los "
+        "del banco es a las nueve, pero si termino antes me paso un rato por "
+        "allí para ver cómo va todo aquello.\n"
+        "Ella asintió sin decir nada y cerró la puerta despacio."
+    )
+    r = unslop.analyze(dialogue)
+    assert r["language"] == "es"
+    # five dialogue dashes: over the English allowance, inside the Spanish one
+    assert r["em_dashes"] == 5
+    assert r["em_dash_excess"] == 0
+    forced_en = unslop.analyze(dialogue, lang="en")
+    assert forced_en["em_dash_excess"] > 0
+
+
+def test_lang_flag_forces_pack_via_cli():
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "a.txt")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("Plain English words that mention nothing special at all.")
+        code, out = run_cli_in(d, ["--no-config", "--json", "--lang", "de", "a.txt"])
+        r = json.loads(out)
+        assert r["language"] == "de"
+        assert r["language_source"] == "forced"
+
+
+def test_curly_apostrophe_phrases_are_caught():
+    r = unslop.analyze("It’s important to note that we should move on quickly.")
+    assert any(p == "it's important to note" for p, _, _ in r["phrases"])

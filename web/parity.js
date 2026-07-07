@@ -28,11 +28,12 @@ function pyRunner() {
 }
 const RUNNER = pyRunner();
 
-function cliAnalyze(text) {
+function cliAnalyze(text, lang) {
   // --threshold 1e12 so the CLI always exits 0: it exits 1 on a high score by
   // design, which execFileSync would otherwise throw on. The score in --json
   // output is the same either way.
   const args = RUNNER.slice(1).concat([CLI, "--json", "--no-config", "--threshold", "1e12"]);
+  if (lang) args.push("--lang", lang);
   const out = execFileSync(RUNNER[0], args, { input: Buffer.from(text, "utf8") });
   return JSON.parse(out.toString("utf8"));
 }
@@ -108,15 +109,57 @@ const FIXTURES = {
   "curly quotes": "It’s important to note that we’re here to help. Don’t worry, it’ll be fine.",
 
   "single sentence long": "The whole thing came down to a single decision made late one night by a tired engineer who had already been warned twice about the risk and chose to ship anyway because the deadline felt more real than the danger.",
+
+  // ---- language packs: one slop + one clean fixture per pack, all of them
+  // exercising detection, the per-language lists, and the em-dash factor
+  // through both implementations at once ----
+
+  "es slop": "En el vasto mundo del desarrollo de software, es importante destacar que nuestra plataforma integral aprovecha tecnología de vanguardia para ofrecer una experiencia fluida y sin fisuras. Sumérgete en un rico tapiz de posibilidades que te permitirá desbloquear todo tu potencial. No es solo una herramienta, es un cambio de paradigma que fomenta la innovación en el panorama digital actual. Cabe destacar que nuestro enfoque holístico transforma la manera en que navegas por las complejidades del trabajo moderno. ¡Espero que esto te ayude!",
+
+  "es clean": "Ayer se me rompió la cadena de la bici a mitad del camino al trabajo. La arreglé con el tronchacadenas que llevo desde hace años y nunca había usado. Tardé veinte minutos y llegué con las manos negras de grasa, pero llegué. El mecánico del barrio me dijo después que la cadena ya tenía más de cinco mil kilómetros. Le compré una nueva ahí mismo.",
+
+  "fr slop": "Dans le monde en constante évolution du numérique, il est important de noter que notre solution complète exploite une technologie de pointe pour offrir une expérience fluide et transparente. Plongez dans une riche tapisserie de possibilités qui vous permettra de libérer tout votre potentiel. Ce n'est pas seulement un outil, c'est un véritable changement de paradigme. Il convient de souligner que notre approche holistique transforme votre façon de travailler. N'hésitez pas à nous contacter !",
+
+  "fr clean": "La boulangerie du coin a changé de propriétaire le mois dernier. Le nouveau fait le pain au levain lui-même, et franchement ça se sent. Par contre il ouvre à sept heures au lieu de six, ce qui m'a valu deux matins sans baguette avant que je comprenne. Le prix a pris dix centimes mais personne ne se plaint.",
+
+  "de slop": "In der heutigen schnelllebigen digitalen Landschaft ist es wichtig zu beachten, dass unsere umfassende Plattform modernste Technologie nutzt, um ein nahtloses Erlebnis zu bieten. Tauchen Sie ein in ein reiches Geflecht von Möglichkeiten, das Ihnen ermöglicht, Ihr volles Potenzial zu entfesseln. Es ist nicht nur ein Werkzeug, sondern ein Paradigmenwechsel, der Innovation fördert. Ich hoffe, das hilft Ihnen weiter!",
+
+  "de clean": "Der Aufzug im Haus ist seit Dienstag wieder kaputt. Diesmal ist es wohl die Steuerung, nicht die Tür wie im März. Die Hausverwaltung hat einen Zettel aufgehängt, auf dem steht, das Ersatzteil komme voraussichtlich nächste Woche. Ich nehme die Treppe und rede mir ein, das sei gut fürs Knie.",
+
+  "pt slop": "No cenário digital em constante evolução de hoje, é importante ressaltar que nossa plataforma abrangente aproveita tecnologia de ponta para oferecer uma experiência fluida e perfeita. Mergulhe em uma rica tapeçaria de possibilidades que permitirá desbloquear todo o seu potencial. Não é apenas uma ferramenta, é uma mudança de paradigma que fomenta a inovação. Espero que isso ajude!",
+
+  "pt clean": "O ônibus da linha 47 mudou de itinerário sem aviso nenhum. Descobri na segunda-feira, esperando vinte minutos num ponto onde ele não passa mais. Uma senhora que esperava comigo já sabia e me explicou o desvio novo, pela avenida do mercado. No fim o trajeto novo até que é melhor pra mim, mas podiam ter avisado antes.",
+
+  "it slop": "Nel panorama digitale in continua evoluzione di oggi, è importante sottolineare che la nostra piattaforma completa sfrutta una tecnologia all'avanguardia per offrire un'esperienza fluida e senza soluzione di continuità. Immergiti in un ricco arazzo di possibilità che ti permetterà di sbloccare tutto il tuo potenziale. Non è solo uno strumento, è un cambio di paradigma. Spero che questo ti sia utile!",
+
+  "it clean": "Il bar sotto casa ha finalmente sistemato la macchina del caffè. Erano due settimane che faceva un rumore strano, tipo un trapano, e il caffè veniva fuori tiepido. Il tecnico ha trovato una guarnizione andata, dieci euro di pezzo e mezz'ora di lavoro. Adesso il caffè è tornato quello di prima.",
+
+  "nl slop": "In het snel veranderende digitale landschap van vandaag is het belangrijk om op te merken dat ons alomvattende platform geavanceerde technologie benut om een naadloze ervaring te bieden. Duik in een rijk tapijt van mogelijkheden waarmee je je volledige potentieel kunt ontgrendelen. Het is niet zomaar een hulpmiddel, het is een paradigmaverschuiving. Ik hoop dat dit helpt!",
+
+  "nl clean": "De buurman heeft eindelijk zijn schutting gerepareerd, die sinds die storm in februari scheef hing. Hij heeft er drie zaterdagen over gedaan en twee keer nieuwe planken moeten halen omdat hij verkeerd gemeten had. Gisteren stond het ding recht en vanmorgen zat er alweer een kat bovenop.",
+
+  "cyrillic fallback": "Вчера сломалась цепь на велосипеде по дороге на работу. Починил её выжимкой, которую вожу с собой уже много лет и ни разу не использовал. Потратил двадцать минут и приехал с чёрными от смазки руками, но приехал вовремя.",
+
+  "french curly apostrophes": "Ce n’est pas seulement un outil, c’est un changement de paradigme. Il est important de noter que vous êtes entre de bonnes mains. N’hésitez pas à explorer toutes les options disponibles pour votre projet.",
+};
+
+// [text, lang] pairs: same diff, but with --lang forced on both sides.
+const FORCED = {
+  "forced es on english": ["The quick brown fox jumps over the lazy dog and keeps going for a while.", "es"],
+  "forced en on spanish": ["El zorro marrón salta sobre el perro perezoso y sigue corriendo un buen rato más.", "en"],
+  "forced de on german": ["In der heutigen schnelllebigen Welt ist es wichtig zu beachten, dass nahtlose Synergien entscheidend sind.", "de"],
 };
 
 let pass = 0, fail = 0;
 const failures = [];
-for (const [name, text] of Object.entries(FIXTURES)) {
+const cases = [];
+for (const [name, text] of Object.entries(FIXTURES)) cases.push([name, text, null]);
+for (const [name, [text, lang]] of Object.entries(FORCED)) cases.push([name, text, lang]);
+for (const [name, text, lang] of cases) {
   let py, js, err = null;
   try {
-    py = cliAnalyze(text);
-    js = Unslop.analyze(text);
+    py = cliAnalyze(text, lang);
+    js = Unslop.analyze(text, lang ? { lang: lang } : undefined);
   } catch (e) {
     err = e.message;
   }
