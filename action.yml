@@ -29,11 +29,17 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
     - shell: bash
+      env:
+        UNSLOP_PATHS: ${{ inputs.paths }}
+        UNSLOP_THRESHOLD: ${{ inputs.threshold }}
+        UNSLOP_MARKDOWN: ${{ inputs.markdown }}
+        UNSLOP_SCRIPT: ${{ github.action_path }}/unslop.py
       run: |
         set -e
         args=()
-        if [ "${{ inputs.markdown }}" = "true" ]; then
+        if [ "$UNSLOP_MARKDOWN" = "true" ]; then
           args+=(--markdown)
         fi
-        args+=(--threshold "${{ inputs.threshold }}")
-        python "${{ github.action_path }}/unslop.py" "${args[@]}" ${{ inputs.paths }}
+        args+=(--threshold "$UNSLOP_THRESHOLD")
+        # $UNSLOP_PATHS stays unquoted: the input is a space-separated list.
+        python "$UNSLOP_SCRIPT" "${args[@]}" $UNSLOP_PATHS
