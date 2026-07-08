@@ -310,11 +310,17 @@
 
   // ---------- html escaping for the backdrop ----------
 
+  // Used for both HTML content (text nodes) and attribute values
+  // (data-label/data-hint/aria-label in buildBackdropHtml below) - the
+  // quote escape only matters for the latter, but escaping it unconditionally
+  // costs nothing and means a translated label/hint string is never one
+  // stray `"` away from breaking out of an attribute.
   function escapeHtml(s) {
     return s
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   var CATEGORY_CLASS = {
