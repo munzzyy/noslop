@@ -1,18 +1,21 @@
 # unslop
 
-**The AI-writing linter. See exactly what makes your writing sound like a robot — in sixteen languages, on your own machine — and fix it before you hit send.**
+**The AI-writing linter. See the exact words that make your writing sound like a robot — in sixteen languages, on your own machine — and fix them before anyone else reads a word.**
 
 [![CI](https://github.com/munzzyy/unslop/actions/workflows/test.yml/badge.svg)](https://github.com/munzzyy/unslop/actions/workflows/test.yml)
 [![License: Prosperity 3.0.0](https://img.shields.io/badge/license-Prosperity--3.0.0-blue.svg)](LICENSE)
 ![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![scores 0.0 on itself](https://img.shields.io/badge/own%20README-0.0%2F1k-brightgreen)
+![16 languages](https://img.shields.io/badge/languages-16-blue)
+[![try it in your browser](https://img.shields.io/badge/try%20it-in%20your%20browser-orange)](https://munzzyy.github.io/unslop/)
 
 AI detectors hand you a verdict-shaped guess. unslop hands you the exact words to change:
 every buzzword, filler phrase, contrast-frame cliché, stray em dash, and flat-rhythm
 paragraph, underlined where it sits, with a line number and a reason. Deterministic, so
 the same text gets the same score every time. Local, so your unpublished draft never
-touches anyone's server. And it puts its scoring where its mouth is — this README scores
-**0.0/1k** on unslop itself, and CI fails if that ever stops being true.
+touches anyone's server.
+
+> **The proof is the product: this README scores 0.0/1k on unslop itself, and CI fails the build the day that stops being true.**
 
 Four ways to run it: paste into the [browser app](https://munzzyy.github.io/unslop/), drop the CLI into a pre-commit hook or CI, wire it into [reviewdog](#hooks) for inline PR comments, or install it as a skill so your AI coding agent checks its own prose before handing it back to you.
 
