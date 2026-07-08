@@ -1,18 +1,42 @@
 # unslop
 
-**See what makes your writing sound like a robot, then fix it before you hit send.** unslop flags the patterns that read as chatbot prose, shows you what it found and where, and gives you a score. It reads sixteen languages, and the fixing stays your job.
+**The AI-writing linter. See exactly what makes your writing sound like a robot — in sixteen languages, on your own machine — and fix it before you hit send.**
 
 [![CI](https://github.com/munzzyy/unslop/actions/workflows/test.yml/badge.svg)](https://github.com/munzzyy/unslop/actions/workflows/test.yml)
 [![License: Prosperity 3.0.0](https://img.shields.io/badge/license-Prosperity--3.0.0-blue.svg)](LICENSE)
 ![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
+![scores 0.0 on itself](https://img.shields.io/badge/own%20README-0.0%2F1k-brightgreen)
 
-Three ways to run it: paste into the [browser demo](https://munzzyy.github.io/unslop/), drop the CLI into a pre-commit hook or CI, or install it as a skill so your AI coding agent checks its own prose before handing it back to you.
+AI detectors hand you a verdict-shaped guess. unslop hands you the exact words to change:
+every buzzword, filler phrase, contrast-frame cliché, stray em dash, and flat-rhythm
+paragraph, underlined where it sits, with a line number and a reason. Deterministic, so
+the same text gets the same score every time. Local, so your unpublished draft never
+touches anyone's server. And it puts its scoring where its mouth is — this README scores
+**0.0/1k** on unslop itself, and CI fails if that ever stops being true.
+
+Four ways to run it: paste into the [browser app](https://munzzyy.github.io/unslop/), drop the CLI into a pre-commit hook or CI, wire it into [reviewdog](#hooks) for inline PR comments, or install it as a skill so your AI coding agent checks its own prose before handing it back to you.
 
 **[Try it in your browser](https://munzzyy.github.io/unslop/).** Paste a draft and watch the tells light up. It all runs client-side, so nothing you paste is uploaded, stored, or sent anywhere.
 
 [![unslop analyzing a slop-heavy paragraph, every AI tell underlined in place](docs/media/app-dark.png)](https://munzzyy.github.io/unslop/)
 
 Prefer the terminal? It's also one Python file with no dependencies that drops into a pre-commit hook or CI. Same scoring engine either way, and either way it runs locally and deterministically with no network access.
+
+## Why this and not a detector
+
+| | unslop | AI detectors (SaaS) | Vale + ai-tells |
+|---|---|---|---|
+| Tells you *what to fix*, word by word | yes — line numbers and hints | no — one probability score | vocabulary and phrasing |
+| Sentence-rhythm and formatting tells | yes | opaque | no ([their own docs name the gap](#vs-vale--vale-ai-tells)) |
+| Languages | sixteen, each researched separately | English-first | English |
+| Your draft stays on your machine | always — even the browser app | uploaded to their servers | yes |
+| Same text, same score, every time | yes — CLI and browser parity-tested | no, model-dependent | yes |
+| Pre-commit, CI, agent skill | all three, zero dependencies | paid API, upload required | pre-commit, via a Vale install |
+| Open source, auditable scoring | every weight in one file | no | yes |
+
+Nothing else combines that column. And the honest limits are documented [below](#limitations) — a
+clean score means these tells are absent, not that a human typed it. That's the linter's contract:
+catch what's catchable, show the work, leave the verdict-guessing to tools that enjoy being wrong.
 
 ## As an agent skill
 

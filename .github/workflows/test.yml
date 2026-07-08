@@ -23,6 +23,17 @@ jobs:
       - run: pip install pytest
       - run: python -m pytest tests/ -q
 
+  # The README sells a linter for AI-sounding prose, so it has to keep passing
+  # that linter. This fails the build the day the docs start sounding like a bot.
+  readme-dogfood:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - run: python unslop.py --no-config README.md
+
   # The browser UI (web/) ships its own copy of the scorer in web/detector.js.
   # This proves it stays byte-for-byte in agreement with unslop.py, so the web
   # app can never quietly disagree with the CLI.
