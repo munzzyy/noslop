@@ -215,16 +215,33 @@ python unslop.py --rdjson docs/*.md | reviewdog -f=rdjsonl -name=unslop -reporte
 
 The word and phrase lists live at the top of [unslop.py](unslop.py); edit them directly if you're hacking on unslop itself, or use a [config file](#config) if you just want to adjust the lists for your own project. Roughly:
 
-- words LLMs lean on far more than people do (`delve`, `robust`, `leverage`, `tapestry`)
-- boilerplate phrases (`it's important to note`, `let's dive into`, `I hope this helps`)
-- the `not just X, but Y` contrast frame and the `it isn't X, it's Y` flip
-- rhetorical-question openers
-- em dashes well past normal density
-- emoji in prose
-- runs of `**Term:** explanation` bullets
-- sentence lengths with almost no variation
-- all of the above per language: each supported language has its own researched word
-  and phrase lists, its own construction patterns, and its own punctuation allowances
+- **chat-UI residue** - leftover citation markup (`oaicite`, `oai_citation`, `grok_card`)
+  and `utm_source=chatgpt.com` links. Nobody types these by hand, so one hit scores the
+  hard verdict on its own. (Writing *about* these markers trips it too - quote them in
+  code formatting, or skip the file with `.unslopignore`.)
+- words LLMs lean on far more than people do (`delve`, `robust`, `leverage`, `tapestry` -
+  plus the words two 2025 word-frequency studies measured at 3x-67x their pre-LLM baseline:
+  `groundbreaking`, `surpassing`, `garnered`, `emphasizing`, and friends)
+- boilerplate phrases (`it's important to note`, `let's dive into`, `I hope this helps`) and
+  significance inflation (`stands as a testament`, `continues to captivate`, `a pivotal moment`)
+- the `not just X, but Y` contrast frame, the `it isn't X, it's Y` flip, and its split-sentence
+  cousin: `The problem isn't X. It's Y.`
+- the dangling `-ing` significance closer (`..., highlighting the importance of...`)
+- rhetorical-question openers, mid-sentence question hooks (`The result? ...`), and
+  ta-da openers (`Here's why...`)
+- sycophantic chat openers (`Great question!`) that leaked into prose
+- anaphora triads (`where X, where Y, where Z`) - the second one on, a single triad is
+  just rhetoric
+- sentence-initial connective spray (`Moreover... Furthermore... Additionally...`),
+  scored on density, never on one hit
+- em dashes well past normal density, emoji in prose, and emoji decorating headings
+- runs of `**Term:** explanation` bullets (with or without the bullet), bold-emphasis
+  spray inside running prose
+- curly and straight quotes mixed in one document - usually a paste boundary
+- staccato runs of three-plus tiny sentences, sentence lengths with almost no variation,
+  paragraph lengths with almost no variation
+- all of the above that's language-independent runs for every language; the vocabulary,
+  phrase, and construction lists are researched per language, never machine-translated
 
 Each hit has a weight, the weights are summed, and the total is scaled per 1,000 words. Under 10 usually reads fine. From 10 to 25 the text deserves a second pass, and past 25 it needs rewriting rather than word swaps. The cutoffs are judgment calls, not measurements; if they fight your material, move `--threshold`.
 
@@ -234,10 +251,22 @@ The `--json` field names (`words`, `score_per_1k`, `verdict`, `language`, `langu
 
 If you're already running [Vale](https://vale.sh), [vale-ai-tells](https://github.com/tbhb/vale-ai-tells) covers a lot of the same ground with Vale's own style-rule format. The gap it names in its own docs is sentence-length uniformity and paragraph rhythm - it checks vocabulary and phrasing, not cadence. unslop's `sentence_uniformity_cv` check is exactly that: a coefficient-of-variation measure that catches the suspiciously even sentence lengths LLMs tend to produce even when the vocabulary itself passes. And unslop doesn't need a Vale install or a `.vale.ini` to get there - it's one file, stdlib only.
 
+## Measured, not vibes
+
+`eval/` holds a labeled corpus - 16 samples of unedited LLM output across genres, 16 samples
+of human writing from essays to old cookbooks to a 2016 Rails README - and a scorer that
+reports detection rate, false-positive rate, and AUC against it. The current engine catches
+**14 of 16 AI samples** at the "worth a pass" threshold (up from 6 of 16 on the previous
+engine) and flags **one human sample** (Thoreau, who writes about literal landscapes with
+heavy em dashes - the receipts are in [eval/README.md](eval/README.md)). CI runs the eval
+with floors, so a change that trades false positives for recall fails the build instead of
+shipping quietly.
+
 ## Limitations
 
 - It matches surface patterns, not intent. A document that quotes slop in running prose gets flagged for it, quotation marks or not. Code formatting is the only escape hatch it understands.
-- The lists are one person's opinion about English tech writing, and they only cover English. If `robust` is a term of art in your field, edit the list or raise the threshold.
+- The lists are one person's research-informed opinion, sixteen languages deep. If `robust` is a term of art in your field, edit the list or raise the threshold.
+- The sentence-uniformity check shares a mechanism with the burstiness signal that a Stanford study ([Liang et al. 2023](https://www.sciencedirect.com/science/article/pii/S2666389923001307)) showed flags non-native English writers far more than native ones. That's why it adds a small fixed bump instead of a verdict, why its weight didn't go up in 0.7.0, and why no rhythm check alone can push clean text past the hard threshold. If you write in a second language and unslop nags you about rhythm, that's the check to ignore.
 - A clean score doesn't mean the writing is good, and it doesn't prove a human wrote it. It means none of these particular tells showed up. A careful writer can trip it, and lazy slop can slip past it.
 
 ## Contributing
