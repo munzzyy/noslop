@@ -293,7 +293,10 @@ LANGUAGES = {
             "von entscheidender bedeutung",
         ],
         "phrases": [
-            "es ist wichtig zu beachten", "es ist wichtig zu betonen",
+            # both orders: German V2 inverts the frame after a fronted
+            # adverbial ("In der heutigen Welt ist es wichtig zu beachten")
+            "es ist wichtig zu beachten", "ist es wichtig zu beachten",
+            "es ist wichtig zu betonen", "ist es wichtig zu betonen",
             "es sei darauf hingewiesen", "es ist erwähnenswert",
             "zusammenfassend lässt sich sagen",
             "abschließend lässt sich sagen", "am ende des tages",
