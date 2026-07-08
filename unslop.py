@@ -1343,7 +1343,9 @@ def report(r, quiet=False):
     out = [f"words: {r['words']}   AI-tell score: {r['score_per_1k']}/1k   -> {r['verdict']}"]
     if quiet:
         return "\n".join(out)
-    if r["language"] != "en" or r["language_source"] == "forced":
+    if r["language_source"] == "fallback":
+        out.append("language: no pack matched - scored with the English lists and structural checks only")
+    elif r["language"] != "en" or r["language_source"] == "forced":
         name = LANGUAGES[r["language"]]["name"]
         out.append(f"language: {name} ({r['language_source']})")
     if r["buzzwords"]:
