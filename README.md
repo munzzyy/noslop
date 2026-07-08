@@ -1,6 +1,6 @@
 # unslop
 
-**See what makes your writing sound like a robot, then fix it before you hit send.** unslop flags the patterns that read as chatbot prose, shows you what it found and where, and gives you a score. Fixing the words is your job.
+**See what makes your writing sound like a robot, then fix it before you hit send.** unslop flags the patterns that read as chatbot prose, shows you what it found and where, and gives you a score. It reads sixteen languages, and the fixing stays your job.
 
 [![CI](https://github.com/munzzyy/unslop/actions/workflows/test.yml/badge.svg)](https://github.com/munzzyy/unslop/actions/workflows/test.yml)
 [![License: Prosperity 3.0.0](https://img.shields.io/badge/license-Prosperity--3.0.0-blue.svg)](LICENSE)
@@ -64,6 +64,41 @@ $ echo $?
 1
 ```
 
+## Sixteen languages
+
+An LLM writing Spanish slop doesn't use translations of the English tells - it has its
+own crutches (*sumérgete*, *sin fisuras*, *cabe destacar*), and German slop leans on
+*nahtlos* and *es ist wichtig zu beachten*. So every language here carries its own
+researched lists, not a machine translation of the English ones: English, Spanish,
+French, German, Portuguese (Brazil), Italian, Dutch, Russian, Ukrainian, Polish, Czech,
+Turkish, Swedish, Romanian, Hungarian, and Finnish.
+
+The input language is sniffed per file from stop-word coverage (standard library only,
+nothing phones home) and every pack keeps the same weights, so a 25+/1k verdict means
+the same thing in every language. Punctuation habits that differ by language are tuned
+per pack - Spanish dialogue dashes don't get flagged as em-dash spray. Force a language
+with `--lang` when you know better:
+
+```bash
+unslop --lang de entwurf.md
+unslop informe.md            # auto-detected per file
+```
+
+Text the sniffer can't confidently place falls back to the English lists plus the
+structural checks (rhythm, formatting, emoji), and the output says so instead of
+pretending - `--json` carries `language` and `language_source`
+(`detected` / `forced` / `fallback`).
+
+Some languages are deliberately absent rather than badly present. Danish and Norwegian
+Bokmål share too many function words to tell apart by this method, Greek's candidate
+list ran into words that are ordinary prose there, and a few others would have been
+guesses. Chinese, Japanese, and Korean need different tokenization entirely, so they
+aren't faked with the current pipeline. A pack only ships when the tells are real.
+
+The browser app follows along: its interface reads in 32 languages (pick from the globe
+menu), it shows which language it detected in your text, and you can override that per
+paste.
+
 ## Install
 
 ```bash
@@ -86,6 +121,7 @@ git log -1 --format=%B | unslop     # or stdin
 unslop --quiet draft.md             # verdict line only
 unslop --json draft.md              # results as JSON
 unslop --exclude CHANGELOG.md docs/*.md   # skip a file in a glob run
+unslop --lang es informe.md         # force a language pack (default: auto-detect)
 ```
 
 The exit code is 0 when every input scores under the threshold, 1 when something scores over it, and 2 if a path couldn't be read at all - so a crash and a lint finding never look the same to a script. The default threshold is 10; change it with `--threshold`. `docs/*.md` works even on Windows shells that don't expand the glob themselves.
@@ -125,7 +161,7 @@ With [pre-commit](https://pre-commit.com):
 ```yaml
 repos:
   - repo: https://github.com/munzzyy/unslop
-    rev: v0.5.0
+    rev: v0.6.0
     hooks:
       - id: unslop
 ```
@@ -135,7 +171,7 @@ That runs on the markdown, text, and rst files in each commit.
 As a GitHub Action, no pre-commit framework required:
 
 ```yaml
-- uses: munzzyy/unslop@v0.5.0
+- uses: munzzyy/unslop@v0.6.0
   with:
     paths: "docs/*.md README.md"
 ```
@@ -160,10 +196,12 @@ The word and phrase lists live at the top of [unslop.py](unslop.py); edit them d
 - emoji in prose
 - runs of `**Term:** explanation` bullets
 - sentence lengths with almost no variation
+- all of the above per language: each supported language has its own researched word
+  and phrase lists, its own construction patterns, and its own punctuation allowances
 
 Each hit has a weight, the weights are summed, and the total is scaled per 1,000 words. Under 10 usually reads fine. From 10 to 25 the text deserves a second pass, and past 25 it needs rewriting rather than word swaps. The cutoffs are judgment calls, not measurements; if they fight your material, move `--threshold`.
 
-The `--json` field names (`words`, `score_per_1k`, `verdict`, `buzzwords`, `phrases`, `patterns`, and the rest) are treated as a stable interface once something depends on them - a pinned test in the suite locks the key set, so a rename shows up as a broken test rather than a silent break in whatever's parsing the output.
+The `--json` field names (`words`, `score_per_1k`, `verdict`, `language`, `language_source`, `buzzwords`, `phrases`, `patterns`, and the rest) are treated as a stable interface once something depends on them - a pinned test in the suite locks the key set, so a rename shows up as a broken test rather than a silent break in whatever's parsing the output.
 
 ## vs. Vale / vale-ai-tells
 

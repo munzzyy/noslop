@@ -35,6 +35,13 @@ Markdown gets its fenced/inline code blocks skipped automatically by extension; 
 `--markdown` to get the same treatment on stdin or a non-`.md` file. Drop `--json` for a
 human-readable report with line numbers instead of the machine-readable one.
 
+Non-English prose works too: sixteen languages ship with their own researched tell
+lists (es, fr, de, pt-BR, it, nl, ru, uk, pl, cs, tr, sv, ro, hu, fi alongside en), and
+the input language is detected per file. Check the `language` and `language_source`
+fields in the JSON - `"fallback"` means no pack matched and only the structural checks
+plus the English lists ran, so treat a clean score on such text as weak evidence. Force
+a pack with `--lang de` when you know what the text is.
+
 ## Reading the result
 
 The important field is `score_per_1k`, a weighted count of AI tells per 1,000 words:
