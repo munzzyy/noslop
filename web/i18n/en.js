@@ -114,12 +114,13 @@ window.UnslopI18N.catalogs.en = {
   // ---- Breakdown ----------------------------------------------------------
   // "category.*" keys mirror Unslop.CATEGORY_META's own category ids and
   // cover every mark the highlighter can produce (used for tooltip/aria
-  // labels on individual marks). "breakdown.section.*" are the three
-  // section headings above a LIST of findings for that category - a
-  // separate, usually-plural phrasing, only needed for the three categories
-  // that ever get their own breakdown section (buzzword/phrase/construction;
+  // labels on individual marks). "breakdown.section.*" are the section
+  // headings above a LIST of findings for that category - a separate,
+  // usually-plural phrasing, only needed for the four categories that ever
+  // get their own breakdown section (artifact/buzzword/phrase/construction;
   // hedge/emoji/emdash/bold-bullet only ever appear as per-mark labels).
   "breakdown.heading": "Breakdown",
+  "category.artifact": "Chat-UI residue",
   "category.phrase": "Filler phrase",
   "category.buzzword": "Buzzword",
   "category.construction": "Construction",
@@ -127,6 +128,7 @@ window.UnslopI18N.catalogs.en = {
   "category.emoji": "Emoji",
   "category.emdash": "Em dash",
   "category.bold-bullet": "Bold-label bullet",
+  "breakdown.section.artifact": "Chat-UI residue (direct paste evidence)",
   "breakdown.section.buzzword": "Buzzwords",
   "breakdown.section.phrase": "Filler phrases",
   "breakdown.section.construction": "Constructions",
@@ -149,6 +151,18 @@ window.UnslopI18N.catalogs.en = {
   "surface.boldBulletTemplateRun": " (template run)",
   "surface.sentenceVariation": "sentence-length variation",
   "surface.suspiciouslyEven": " (suspiciously even)",
+  // New in 0.7.0 - English-only for now; every other locale falls back to
+  // these strings at runtime until its catalog gets a native pass.
+  "surface.headerEmoji": "emoji decorating headings/bullets",
+  "surface.staccato": "runs of 3+ tiny sentences",
+  "surface.quoteMix": "curly + straight quotes mixed",
+  "surface.questionHooks": "mid-sentence question hooks",
+  "surface.connectives": "sentences opening on a connective",
+  "surface.boldInline": "bold spans in running prose",
+  "surface.paragraphVariation": "paragraph-length variation (suspiciously even)",
+  "surface.openerShare": "sentences opening with the same word (not scored)",
+  "explainer.artifact.term": "Chat-UI residue",
+  "explainer.artifact.def": "Leftover chatbot markup: citation markers like oaicite, or a link that still carries utm_source=chatgpt.com. Nobody types these by hand, so one is direct paste evidence and scores the hard verdict on its own.",
 
   // ---- Explainer ("What it checks") ----------------------------------------
   "explainer.summary": "What it checks",

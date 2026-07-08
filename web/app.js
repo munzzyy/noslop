@@ -324,6 +324,7 @@
   }
 
   var CATEGORY_CLASS = {
+    artifact: "m-artifact",
     phrase: "m-phrase",
     buzzword: "m-buzzword",
     construction: "m-construction",
@@ -637,14 +638,20 @@
     var t = window.UnslopI18N.t;
     breakdownBody.innerHTML = "";
 
+    var hasArtifact = result.ai_artifacts.length > 0;
     var hasBuzz = result.buzzwords.length > 0;
     var hasPhrase = result.phrases.length > 0;
     var hasPattern = result.patterns.length > 0;
     var hasSurfaceFlag =
       result.em_dash_excess > 0 || result.emoji > 0 || result.bold_label_bullets >= 3 ||
-      (result.sentence_uniformity_cv !== null && result.sentence_uniformity_cv < 0.35);
+      result.header_emoji > 0 || result.staccato_runs > 0 || result.quote_mix > 0 ||
+      result.question_hook_excess > 0 || result.connective_excess > 0 ||
+      result.bold_inline_excess > 0 ||
+      (result.sentence_uniformity_cv !== null && result.sentence_uniformity_cv < 0.35) ||
+      (result.paragraph_uniformity_cv !== null && result.paragraph_uniformity_cv < 0.25) ||
+      (result.opener_top_share !== null && result.opener_top_share >= 0.4);
 
-    if (!hasBuzz && !hasPhrase && !hasPattern && !hasSurfaceFlag) {
+    if (!hasArtifact && !hasBuzz && !hasPhrase && !hasPattern && !hasSurfaceFlag) {
       var clean = document.createElement("div");
       clean.className = "clean-state";
       clean.innerHTML =
@@ -658,6 +665,7 @@
       return;
     }
 
+    if (hasArtifact) breakdownBody.appendChild(buildSection(t("breakdown.section.artifact"), "swatch-artifact", result.ai_artifacts, "artifact"));
     if (hasBuzz) breakdownBody.appendChild(buildSection(t("breakdown.section.buzzword"), "swatch-buzzword", result.buzzwords, "buzz"));
     if (hasPhrase) breakdownBody.appendChild(buildSection(t("breakdown.section.phrase"), "swatch-phrase", result.phrases, "phrase"));
     if (hasPattern) breakdownBody.appendChild(buildSection(t("breakdown.section.construction"), "swatch-construction", result.patterns, "pattern"));
@@ -722,6 +730,58 @@
           window.UnslopI18N.formatNumber(result.sentence_uniformity_cv, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
           t("surface.sentenceVariation") + (result.sentence_uniformity_cv < 0.35 ? t("surface.suspiciouslyEven") : ""),
           result.sentence_uniformity_cv < 0.35
+        ));
+      }
+      if (result.header_emoji > 0) {
+        grid.appendChild(tile(
+          window.UnslopI18N.formatNumber(result.header_emoji),
+          t("surface.headerEmoji"),
+          true
+        ));
+      }
+      if (result.staccato_runs > 0) {
+        grid.appendChild(tile(
+          window.UnslopI18N.formatNumber(result.staccato_runs),
+          t("surface.staccato"),
+          true
+        ));
+      }
+      if (result.quote_mix > 0) {
+        grid.appendChild(tile("’ + '", t("surface.quoteMix"), true));
+      }
+      if (result.question_hooks > 0) {
+        grid.appendChild(tile(
+          window.UnslopI18N.formatNumber(result.question_hooks),
+          t("surface.questionHooks"),
+          result.question_hook_excess > 0
+        ));
+      }
+      if (result.connective_excess > 0) {
+        grid.appendChild(tile(
+          window.UnslopI18N.formatNumber(result.connective_openers),
+          t("surface.connectives"),
+          true
+        ));
+      }
+      if (result.bold_inline_excess > 0) {
+        grid.appendChild(tile(
+          window.UnslopI18N.formatNumber(result.bold_inline),
+          t("surface.boldInline"),
+          true
+        ));
+      }
+      if (result.paragraph_uniformity_cv !== null && result.paragraph_uniformity_cv < 0.25) {
+        grid.appendChild(tile(
+          window.UnslopI18N.formatNumber(result.paragraph_uniformity_cv, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          t("surface.paragraphVariation"),
+          true
+        ));
+      }
+      if (result.opener_top_share !== null && result.opener_top_share >= 0.4) {
+        grid.appendChild(tile(
+          window.UnslopI18N.formatPercent(result.opener_top_share),
+          t("surface.openerShare"),
+          true
         ));
       }
       section.appendChild(grid);

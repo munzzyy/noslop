@@ -858,6 +858,16 @@ a:hover { color: var(--accent); }
   outline-offset: 1px;
 }
 
+/* Chat-UI residue reuses the construction pair (already contrast-verified
+   on every theme) and adds a double underline so the smoking gun reads as
+   its own class of finding, not just another construction. No font-weight
+   change: the backdrop must match the textarea's glyph metrics character
+   for character, and bold glyphs are wider. */
+mark.m-artifact {
+  background: var(--mark-construction);
+  color: var(--mark-construction-ink);
+  text-decoration: underline double;
+}
 mark.m-phrase { background: var(--mark-phrase); color: var(--mark-phrase-ink); }
 mark.m-buzzword { background: var(--mark-buzzword); color: var(--mark-buzzword-ink); }
 mark.m-construction { background: var(--mark-construction); color: var(--mark-construction-ink); }
@@ -1084,6 +1094,9 @@ kbd {
   border-radius: 3px;
   flex-shrink: 0;
 }
+/* Double border echoes the mark's double underline, so the artifact
+   swatch doesn't read as just another construction square. */
+.swatch-artifact { background: transparent; border: 3px double var(--mark-construction); }
 .swatch-phrase { background: var(--mark-phrase); }
 .swatch-buzzword { background: var(--mark-buzzword); }
 .swatch-construction { background: var(--mark-construction); }

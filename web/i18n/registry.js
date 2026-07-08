@@ -238,6 +238,25 @@
   }
   ns.formatNumber = formatNumber;
 
+  /** Locale-aware percent (Turkish writes %45, not 45%), same Latin-digit
+   * pinning as formatNumber. Takes the fraction (0.45), not the integer. */
+  function formatPercent(fraction) {
+    if (fraction === null || fraction === undefined || Number.isNaN(fraction)) return String(fraction);
+    var cacheKey = currentLocale + "|percent";
+    var fmt = numberFormatterCache[cacheKey];
+    if (!fmt) {
+      var opts = { style: "percent", numberingSystem: "latn", maximumFractionDigits: 0 };
+      try {
+        fmt = new Intl.NumberFormat(currentLocale, opts);
+      } catch (_e) {
+        fmt = new Intl.NumberFormat(DEFAULT_LOCALE, opts);
+      }
+      numberFormatterCache[cacheKey] = fmt;
+    }
+    return fmt.format(fraction);
+  }
+  ns.formatPercent = formatPercent;
+
   function applyHtmlAttrs(code) {
     if (typeof document === "undefined") return;
     document.documentElement.setAttribute("lang", code);
