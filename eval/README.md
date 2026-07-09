@@ -77,6 +77,11 @@ each run through this eval before and after landing. Three moved a number:
   generic-heading checks pushed `07-listicle-travel.txt` and the three new
   AI samples well past the hard verdict, which is most of the detect@25
   jump from 19% to 37%.
+- To isolate the engine from the corpus change: on the original 32-sample
+  corpus alone, AUC and detection@10 are unchanged from v0.7.0 (0.9688 /
+  87.5%) - those two headline numbers move only because of the 4 new
+  samples. The one engine-driven gain on the old corpus is detection@25,
+  18.8% to 25.0% (`07-listicle-travel.txt` crossing the hard verdict).
 - Nothing moved the human side. The formal-Russian sample
   (`17-law-civil-code-ru.txt`) scores 0.0 - none of the new Russian
   buzzword/"является"-density additions fired on it, because Russian's
