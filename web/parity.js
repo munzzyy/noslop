@@ -283,6 +283,22 @@ const FIXTURES = {
   "varied paragraph openers": "The first paragraph opens with its own distinct sentence here.\n\nA second paragraph starts on a completely different note today.\n\nThen a third one takes yet another angle on the same subject.\n\nThe fourth continues without repeating any earlier opening words.\n\nAnd the fifth wraps up without echoing the others at all here.",
 
   "windowed ttr and function word ratio never score": ("word ".repeat(220)).trim() + ".",
+
+  // A line-anchored opener regex used to let \s* cross newlines, so a run
+  // of blank lines retried the same span at every line start (quadratic,
+  // cubic for the ta-da opener) - see the noslop.py test of the same name.
+  // Both engines have to be fast AND agree on the score.
+  "line anchored openers do not blow up on blank lines": "\n".repeat(20000),
+
+  // noslop.py's word tokenizer counts Nl/No characters (vulgar fractions,
+  // superscripts, circled digits, Roman numerals) as word chars via
+  // [^\W\d_] - detector.js only matched \p{L}, so the same text got a
+  // smaller word count in JS and a different (sometimes verdict-flipping)
+  // per-1k score for identical raw hits.
+  "fraction and roman numeral glyphs count as words (Nl/No parity)":
+    "This robust little recipe card still uses ½¼ ²③ Ⅻ½ ¼² ⅓⅔ ⅛⅜ ⅝⅞ ⅕⅖ ⅗⅘ ⅙⅚ ①② ③④ ⑤⑥ " +
+    "notation from an old engineering table my grandmother kept in the drawer. " +
+    "The oven ran a little warm that day. ".repeat(20),
 };
 
 // [text, lang] pairs: same diff, but with --lang forced on both sides.

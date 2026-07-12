@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 
 import noslop
 
@@ -897,6 +898,31 @@ def test_tada_opener_only_fires_line_initial():
     miss = noslop.analyze("I asked him twice, and here's what he said about it.")
     assert any("ta-da" in label for label, _, _, _, _ in hit["patterns"])
     assert not any("ta-da" in label for label, _, _, _, _ in miss["patterns"])
+
+
+def test_rhetorical_opener_only_fires_line_initial():
+    hit = noslop.analyze("Ever wondered how this works? The pump was never the issue.")
+    miss = noslop.analyze("I asked him if he'd ever wondered about the cause.")
+    assert any("rhetorical question" in label for label, _, _, _, _ in hit["patterns"])
+    assert not any("rhetorical question" in label for label, _, _, _, _ in miss["patterns"])
+
+
+# ---- line-anchored openers must not cross newlines (ReDoS) ----
+#
+# The rhetorical/ta-da/sycophantic openers and the bold-bullet check all
+# anchor on (?m)^, then used to allow \s* right after it. \s* matches \n, so
+# on a run of blank lines the engine retried the same span at every line
+# start - quadratic for a single \s*, cubic for the ta-da opener's two \s*
+# runs around the optional #*. 2KB of blank lines took 11+ seconds; this
+# stayed unnoticed because nobody lints a file that's mostly whitespace.
+
+def test_line_anchored_openers_do_not_blow_up_on_blank_lines():
+    text = "\n" * 20000
+    start = time.time()
+    r = noslop.analyze(text)
+    elapsed = time.time() - start
+    assert elapsed < 1.0, f"analyze() took {elapsed:.2f}s on 20K blank lines"
+    assert r["score_per_1k"] == 0.0
 
 
 # ---- 0.7.0: structural rhythm checks ----

@@ -86,7 +86,7 @@
       /(?<![\p{L}\p{N}_])is(?:n['’]t| not)(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])it(?:['’]s| is)(?![\p{L}\p{N}_])/gu, 2,
       "just say what it is"],
     ["rhetorical question opener",
-      /^\s*(?:ever wondered|have you ever|what if|imagine (?:a|if|that)|picture this)(?![\p{L}\p{N}_])/gimu, 2,
+      /^[ \t]*(?:ever wondered|have you ever|what if|imagine (?:a|if|that)|picture this)(?![\p{L}\p{N}_])/gimu, 2,
       "open with the point, not a hook"],
     ["hedge stack (may/can/often/typically)",
       /(?<![\p{L}\p{N}_])(?:may|might|can|could|often|typically|generally|usually|arguably)(?![\p{L}\p{N}_])/gu, 0,
@@ -103,13 +103,13 @@
       /(?<![\p{L}\p{N}_])(?!(?:and|or|nor|the|an?)(?![\p{L}\p{N}_]))([a-z]{2,12})(?![\p{L}\p{N}_])[^,.?!\n]{2,40},\s+\1(?![\p{L}\p{N}_])[^,.?!\n]{2,40},\s+(?:and\s+)?\1(?![\p{L}\p{N}_])/giu, 2,
       "one of the three carries the point - keep that one", 1],
     ["ta-da opener ('Here's why...')",
-      /^\s*#*\s*here['’]s (?:why|how|what)(?![\p{L}\p{N}_])/gimu, 2,
+      /^[ \t]*#*[ \t]*here['’]s (?:why|how|what)(?![\p{L}\p{N}_])/gimu, 2,
       "skip the reveal frame - state the thing itself"],
     ["fragment hook ('The result?')",
-      /(?:^\s*|(?<=[.!?])\s+)(?:the result|the best part|the catch|the takeaway|the kicker|the bottom line|translation)\?/gimu, 2,
+      /(?:^[ \t]*|(?<=[.!?])\s+)(?:the result|the best part|the catch|the takeaway|the kicker|the bottom line|translation)\?/gimu, 2,
       "answer in the same sentence, or cut the hook"],
     ["sycophantic opener",
-      /^\s*(?:great question|certainly|absolutely|of course|sure thing)!/gimu, 3,
+      /^[ \t]*(?:great question|certainly|absolutely|of course|sure thing)!/gimu, 3,
       "drop the chat-style opener - prose isn't answering anyone"],
     ["'despite challenges ... continues to' arc",
       /(?<![\p{L}\p{N}_])despite(?![\p{L}\p{N}_])[^.?!\n]{0,80}?(?<![\p{L}\p{N}_])(?:challenges|obstacles|setbacks|hurdles)(?![\p{L}\p{N}_])[^.?!\n]{0,120}?(?<![\p{L}\p{N}_])continues? to(?![\p{L}\p{N}_])/giu, 2,
@@ -285,7 +285,7 @@
           /(?<![\p{L}\p{N}_])no es(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])es(?![\p{L}\p{N}_])/giu, 2,
           "di lo que es, sin el rodeo"],
         ["pregunta retórica de apertura",
-          /^\s*(?:¿alguna vez te has preguntado|¿te has preguntado|¿alguna vez has|imagina (?:un|una|que)|imagínate|¿qué pasaría si)/gim, 2,
+          /^[ \t]*(?:¿alguna vez te has preguntado|¿te has preguntado|¿alguna vez has|imagina (?:un|una|que)|imagínate|¿qué pasaría si)/gim, 2,
           "abre con la idea, no con el gancho"],
         ["acumulación de matizadores (puede/podría/a menudo)",
           /(?<![\p{L}\p{N}_])(?:puede|podría|podrían|a menudo|generalmente|típicamente|usualmente|posiblemente|quizás|tal vez)(?![\p{L}\p{N}_])/giu, 0,
@@ -349,7 +349,7 @@
           /(?<![\p{L}\p{N}_])n[’']est pas(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])c[’']est(?![\p{L}\p{N}_])/giu, 2,
           "dites simplement ce que c'est"],
         ["question rhétorique d'ouverture",
-          /^\s*(?:vous êtes-vous déjà demandé|avez-vous déjà|et si|imaginez|qu[’']en serait-il si)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:vous êtes-vous déjà demandé|avez-vous déjà|et si|imaginez|qu[’']en serait-il si)(?![\p{L}\p{N}_])/gimu, 2,
           "ouvrez sur l'idée, pas sur l'accroche"],
         ["empilement de précautions (peut/pourrait/souvent)",
           /(?<![\p{L}\p{N}_])(?:peut|pourrait|pourraient|souvent|généralement|typiquement|habituellement|sans doute|peut-être)(?![\p{L}\p{N}_])/giu, 0,
@@ -413,7 +413,7 @@
           /(?<![\p{L}\p{N}_])ist (?:kein|keine|nicht)(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])es ist(?![\p{L}\p{N}_])/giu, 2,
           "sag einfach, was es ist"],
         ["rhetorische Eröffnungsfrage",
-          /^\s*(?:haben sie sich jemals gefragt|hast du dich jemals gefragt|stellen sie sich vor|stell dir vor|was wäre, wenn|was wäre wenn)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:haben sie sich jemals gefragt|hast du dich jemals gefragt|stellen sie sich vor|stell dir vor|was wäre, wenn|was wäre wenn)(?![\p{L}\p{N}_])/gimu, 2,
           "beginn mit dem Punkt, nicht mit dem Köder"],
         ["Absicherungs-Stapel (kann/könnte/oft)",
           /(?<![\p{L}\p{N}_])(?:kann|könnte|könnten|oft|typischerweise|in der regel|üblicherweise|möglicherweise|vielleicht)(?![\p{L}\p{N}_])/giu, 0,
@@ -482,7 +482,7 @@
           /(?<![\p{L}\p{N}_])não é(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])é(?![\p{L}\p{N}_])/giu, 2,
           "diga o que é, sem o rodeio"],
         ["pergunta retórica de abertura",
-          /^\s*(?:você já se perguntou|já se perguntou|já imaginou|imagine (?:um|uma|que)|e se)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:você já se perguntou|já se perguntou|já imaginou|imagine (?:um|uma|que)|e se)(?![\p{L}\p{N}_])/gimu, 2,
           "abra com o ponto, não com a isca"],
         ["pilha de ressalvas (pode/poderia/frequentemente)",
           /(?<![\p{L}\p{N}_])(?:pode|poderia|poderiam|frequentemente|geralmente|tipicamente|normalmente|possivelmente|talvez)(?![\p{L}\p{N}_])/giu, 0,
@@ -544,7 +544,7 @@
           /(?<![\p{L}\p{N}_])non è(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])è(?![\p{L}\p{N}_])/giu, 2,
           "di' semplicemente cos'è"],
         ["domanda retorica di apertura",
-          /^\s*(?:ti sei mai chiesto|vi siete mai chiesti|hai mai|immagina (?:un|una|che)|e se)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:ti sei mai chiesto|vi siete mai chiesti|hai mai|immagina (?:un|una|che)|e se)(?![\p{L}\p{N}_])/gimu, 2,
           "apri con il punto, non con l'esca"],
         ["pila di cautele (può/potrebbe/spesso)",
           /(?<![\p{L}\p{N}_])(?:può|potrebbe|potrebbero|spesso|generalmente|tipicamente|solitamente|possibilmente|forse)(?![\p{L}\p{N}_])/giu, 0,
@@ -608,7 +608,7 @@
           /(?<![\p{L}\p{N}_])is (?:geen|niet)(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])het is(?![\p{L}\p{N}_])/giu, 2,
           "zeg gewoon wat het is"],
         ["retorische openingsvraag",
-          /^\s*(?:heb je je ooit afgevraagd|heeft u zich ooit afgevraagd|stel je voor|stelt u zich voor|wat als)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:heb je je ooit afgevraagd|heeft u zich ooit afgevraagd|stel je voor|stelt u zich voor|wat als)(?![\p{L}\p{N}_])/gimu, 2,
           "open met het punt, niet met de lokker"],
         ["stapel voorbehouden (kan/zou kunnen/vaak)",
           /(?<![\p{L}\p{N}_])(?:kan|kunnen|zou kunnen|vaak|meestal|doorgaans|over het algemeen|mogelijk|misschien)(?![\p{L}\p{N}_])/giu, 0,
@@ -672,7 +672,7 @@
           /(?<![\p{L}\p{N}_])это не(?![\p{L}\p{N}_])[^.?!\n]{1,45}?,\s*а(?![\p{L}\p{N}_])/giu, 2,
           "просто скажи, что это"],
         ["риторический вопрос-зачин",
-          /^\s*(?:задумывались ли вы|а что если|представьте себе|представьте|вы когда-нибудь)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:задумывались ли вы|а что если|представьте себе|представьте|вы когда-нибудь)(?![\p{L}\p{N}_])/gimu, 2,
           "начни с сути, а не с крючка"],
         ["стопка оговорок (может/вероятно/обычно)",
           /(?<![\p{L}\p{N}_])(?:может|могут|можно|вероятно|как правило|обычно|зачастую|возможно|порой)(?![\p{L}\p{N}_])/giu, 0,
@@ -732,7 +732,7 @@
           /(?<![\p{L}\p{N}_])це не(?![\p{L}\p{N}_])[^.?!\n]{1,45}?,\s*а(?![\p{L}\p{N}_])/giu, 2,
           "просто скажи, що це"],
         ["риторичне питання-зачин",
-          /^\s*(?:чи замислювались ви|чи замислювалися ви|а що якщо|уявіть собі|уявіть)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:чи замислювались ви|чи замислювалися ви|а що якщо|уявіть собі|уявіть)(?![\p{L}\p{N}_])/gimu, 2,
           "почни із суті, а не з гачка"],
         ["стос застережень (може/ймовірно/зазвичай)",
           /(?<![\p{L}\p{N}_])(?:може|можуть|можна|ймовірно|як правило|зазвичай|часто|можливо)(?![\p{L}\p{N}_])/giu, 0,
@@ -789,7 +789,7 @@
           /(?<![\p{L}\p{N}_])to nie(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])tylko(?![\p{L}\p{N}_])/giu, 2,
           "powiedz wprost, czym to jest"],
         ["retoryczne pytanie otwierające",
-          /^\s*(?:czy zastanawiałeś się|czy zastanawiałaś się|a co jeśli|wyobraź sobie|wyobraźcie sobie)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:czy zastanawiałeś się|czy zastanawiałaś się|a co jeśli|wyobraź sobie|wyobraźcie sobie)(?![\p{L}\p{N}_])/gimu, 2,
           "zacznij od sedna, nie od haczyka"],
         ["stos zastrzeżeń (może/często/zazwyczaj)",
           /(?<![\p{L}\p{N}_])(?:może|mogą|często|zazwyczaj|zwykle|prawdopodobnie|ewentualnie|ogólnie)(?![\p{L}\p{N}_])/giu, 0,
@@ -838,7 +838,7 @@
           /(?<![\p{L}\p{N}_])není to(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])je to(?![\p{L}\p{N}_])/giu, 2,
           "řekni prostě, co to je"],
         ["řečnická otázka na úvod",
-          /^\s*(?:přemýšleli jste někdy|napadlo vás někdy|co kdyby|představte si)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:přemýšleli jste někdy|napadlo vás někdy|co kdyby|představte si)(?![\p{L}\p{N}_])/gimu, 2,
           "začni podstatou, ne návnadou"],
         ["hromada výhrad (může/často/obvykle)",
           /(?<![\p{L}\p{N}_])(?:může|mohou|často|obvykle|obecně|pravděpodobně|možná)(?![\p{L}\p{N}_])/giu, 0,
@@ -893,7 +893,7 @@
           /(?<![\p{L}\p{N}_])değil(?![\p{L}\p{N}_])[^.?!\n]{1,45}?\w+(?:dır|dir|dur|dür|tır|tir|tur|tür)(?![\p{L}\p{N}_])/giu, 2,
           "ne olduğunu doğrudan söyle"],
         ["retorik açılış sorusu",
-          /^\s*(?:hiç merak ettiniz mi|hiç düşündünüz mü|hayal edin|bir düşünün)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:hiç merak ettiniz mi|hiç düşündünüz mü|hayal edin|bir düşünün)(?![\p{L}\p{N}_])/gimu, 2,
           "kancayla değil, asıl noktayla aç"],
         // "-ebilir/-abilir" (can/may) is also a suffix, not a standalone
         // word, so it's matched the same way; the rest are ordinary hedge
@@ -947,7 +947,7 @@
           /(?<![\p{L}\p{N}_])är inte(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])det är(?![\p{L}\p{N}_])/giu, 2,
           "säg helt enkelt vad det är"],
         ["retorisk inledningsfråga",
-          /^\s*(?:har du någonsin undrat|har du någonsin funderat|tänk om|föreställ dig)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:har du någonsin undrat|har du någonsin funderat|tänk om|föreställ dig)(?![\p{L}\p{N}_])/gimu, 2,
           "öppna med poängen, inte med kroken"],
         ["garderingsstapel (kan/ofta/vanligtvis)",
           /(?<![\p{L}\p{N}_])(?:kan|skulle kunna|ofta|vanligtvis|i allmänhet|möjligen|kanske)(?![\p{L}\p{N}_])/giu, 0,
@@ -998,7 +998,7 @@
           /(?<![\p{L}\p{N}_])nu este(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])este(?![\p{L}\p{N}_])/giu, 2,
           "spune pur și simplu ce este"],
         ["întrebare retorică de deschidere",
-          /^\s*(?:te-ai întrebat vreodată|v-ați întrebat vreodată|ce-ar fi dacă|imaginează-ți|imaginați-vă)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:te-ai întrebat vreodată|v-ați întrebat vreodată|ce-ar fi dacă|imaginează-ți|imaginați-vă)(?![\p{L}\p{N}_])/gimu, 2,
           "deschide cu ideea, nu cu cârligul"],
         ["stivă de rezerve (poate/adesea/de obicei)",
           /(?<![\p{L}\p{N}_])(?:poate|ar putea|adesea|de obicei|în general|probabil|posibil)(?![\p{L}\p{N}_])/giu, 0,
@@ -1051,7 +1051,7 @@
           /(?<![\p{L}\p{N}_])nem csak(?![\p{L}\p{N}_])[^.?!\n]{1,70}?(?<![\p{L}\p{N}_])hanem(?![\p{L}\p{N}_])/giu, 3,
           "mondd ki egyenesen, kontrasztkeret nélkül"],
         ["retorikai nyitókérdés",
-          /^\s*(?:gondolkodtál már azon|elgondolkodtál már azon|mi lenne ha|képzeld el|képzeljük el)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:gondolkodtál már azon|elgondolkodtál már azon|mi lenne ha|képzeld el|képzeljük el)(?![\p{L}\p{N}_])/gimu, 2,
           "a lényeggel nyiss, ne a csalival"],
         ["óvatoskodás-halom (lehet/gyakran/általában)",
           /(?<![\p{L}\p{N}_])(?:lehet|lehetnek|gyakran|általában|valószínűleg|esetleg)(?![\p{L}\p{N}_])/giu, 0,
@@ -1103,7 +1103,7 @@
           /(?<![\p{L}\p{N}_])ei ole(?![\p{L}\p{N}_])[^.?!\n]{1,45}?(?<![\p{L}\p{N}_])vaan(?![\p{L}\p{N}_])/giu, 2,
           "sano suoraan mitä se on"],
         ["retorinen avauskysymys",
-          /^\s*(?:oletko koskaan miettinyt|oletko koskaan pohtinut|entä jos|kuvittele|kuvitellaan)(?![\p{L}\p{N}_])/gimu, 2,
+          /^[ \t]*(?:oletko koskaan miettinyt|oletko koskaan pohtinut|entä jos|kuvittele|kuvitellaan)(?![\p{L}\p{N}_])/gimu, 2,
           "avaa asialla, älä koukulla"],
         ["varauksien kasa (voi/usein/yleensä)",
           /(?<![\p{L}\p{N}_])(?:voi|voivat|saattaa|usein|yleensä|tavallisesti|todennäköisesti)(?![\p{L}\p{N}_])/giu, 0,
@@ -1134,17 +1134,26 @@
     "|[\\u2190-\\u2bff]\\u{fe0f}", "gu");
 
   const BOLD_BULLET =
-    /^\s*(?:(?:[-*+]|\d{1,3}[.)])\s+)?\*\*[^*\n]{1,45}?(?::\*\*|\*\*:|[.!?]\*\*)/gm;
+    /^[ \t]*(?:(?:[-*+]|\d{1,3}[.)])\s+)?\*\*[^*\n]{1,45}?(?::\*\*|\*\*:|[.!?]\*\*)/gm;
 
   // Letters in any script, not [A-Za-z] - mirrors the Python tokenizer's
   // [^\W\d_] classes so accented and non-Latin words count as words. Two
   // letters minimum for the word count, same as the tokenizer always was.
   // (Python's class also matches bare combining marks; for the NFC text
   // both sides see in practice, the two are equivalent.)
-  const WORD_RE = /\p{L}(?:\p{L}|['\-])+/gu;   // for word count
-  const SENT_WORD_RE = /(?:\p{L}|['\-])+/gu;   // for per-sentence length
+  //
+  // \p{Nl}\p{No} ride along with \p{L}: Python's [^\W\d_] is "\w minus
+  // decimal digits minus underscore", and \w counts a character as a word
+  // char whenever str.isalnum() does - true for Nl (Roman numerals like
+  // Ⅻ) and No (vulgar fractions like ½, superscripts, circled digits) as
+  // well as letters. \d only ever matches Nd, so those two categories
+  // never get excluded the way plain digits do. \p{L} alone dropped the
+  // word count (and so the per-1k score) out of parity with the CLI on
+  // any text using them.
+  const WORD_RE = /[\p{L}\p{Nl}\p{No}](?:[\p{L}\p{Nl}\p{No}]|['\-])+/gu;   // for word count
+  const SENT_WORD_RE = /(?:[\p{L}\p{Nl}\p{No}]|['\-])+/gu;   // for per-sentence length
   const EMDASH_RE = /—/g;
-  const DETECT_TOKEN_RE = /\p{L}+/gu;
+  const DETECT_TOKEN_RE = /[\p{L}\p{Nl}\p{No}]+/gu;
 
   // How much text detection reads - mirrors _DETECT_SAMPLE in noslop.py.
   const DETECT_SAMPLE = 4000;
@@ -1514,7 +1523,7 @@
     if (paras.length >= 5) {
       const paraOpeners = new Map();
       for (const p of paras) {
-        const head = (p.toLowerCase().match(/[\p{L}]+/gu) || []).slice(0, 5);
+        const head = (p.toLowerCase().match(/[\p{L}\p{Nl}\p{No}]+/gu) || []).slice(0, 5);
         if (!head.length) continue;
         const key = head.join(" ");
         paraOpeners.set(key, (paraOpeners.get(key) || 0) + 1);
@@ -1530,8 +1539,11 @@
     }
 
     // Self-answering question hooks (mid-line only) - mirrors noslop.py.
+    // The leading char of each mini-word needs the same Nl/No widening as
+    // WORD_RE above; the continuation class already covers them via \p{N}
+    // (Nd+Nl+No combined), same breadth as Python's \w there.
     const QUESTION_HOOK_RE =
-      /(?<=[.!?]) [ \t]*(?:\p{L}[\p{L}\p{N}_'\-]*[ \t]+){0,4}\p{L}[\p{L}\p{N}_'\-]*\?/gu;
+      /(?<=[.!?]) [ \t]*(?:[\p{L}\p{Nl}\p{No}][\p{L}\p{N}_'\-]*[ \t]+){0,4}[\p{L}\p{Nl}\p{No}][\p{L}\p{N}_'\-]*\?/gu;
     const questionHooks = countMatches(text, QUESTION_HOOK_RE);
     const questionHookExcess = Math.max(0, questionHooks - 1);
 
@@ -1548,8 +1560,9 @@
 
     // Sentence-opener concentration - reported, not scored. The skip class
     // is non-word chars only ([^\w]* in Python): a sentence opening on a
-    // digit records no opener there, so none here either.
-    const OPENER_RE = /^[^\p{L}\p{N}_]*(\p{L}[\p{L}\p{N}_'\-]*)/u;
+    // digit records no opener there, so none here either. The captured
+    // leading char gets the same Nl/No widening as WORD_RE above.
+    const OPENER_RE = /^[^\p{L}\p{N}_]*([\p{L}\p{Nl}\p{No}][\p{L}\p{N}_'\-]*)/u;
     const openers = [];
     for (const s of sentences) {
       const m = s.match(OPENER_RE);

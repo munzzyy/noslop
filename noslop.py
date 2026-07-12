@@ -136,7 +136,7 @@ PATTERNS = [
      r"\bis(?:n['’]t| not)\b[^.?!\n]{1,45}?\bit(?:['’]s| is)\b", 2,
      "just say what it is"),
     ("rhetorical question opener",
-     r"(?im)^\s*(?:ever wondered|have you ever|what if|imagine (?:a|if|that)|picture this)\b", 2,
+     r"(?im)^[ \t]*(?:ever wondered|have you ever|what if|imagine (?:a|if|that)|picture this)\b", 2,
      "open with the point, not a hook"),
     ("hedge stack (may/can/often/typically)",
      r"\b(?:may|might|can|could|often|typically|generally|usually|arguably)\b", 0,
@@ -170,14 +170,14 @@ PATTERNS = [
      r"\1\b[^,.?!\n]{2,40},\s+(?:and\s+)?\1\b", 2,
      "one of the three carries the point - keep that one", 1),
     ("ta-da opener ('Here's why...')",
-     r"(?im)^\s*#*\s*here['’]s (?:why|how|what)\b", 2,
+     r"(?im)^[ \t]*#*[ \t]*here['’]s (?:why|how|what)\b", 2,
      "skip the reveal frame - state the thing itself"),
     ("fragment hook ('The result?')",
-     r"(?im)(?:^\s*|(?<=[.!?])\s+)(?:the result|the best part|the catch|"
+     r"(?im)(?:^[ \t]*|(?<=[.!?])\s+)(?:the result|the best part|the catch|"
      r"the takeaway|the kicker|the bottom line|translation)\?", 2,
      "answer in the same sentence, or cut the hook"),
     ("sycophantic opener",
-     r"(?im)^\s*(?:great question|certainly|absolutely|of course|sure thing)!", 3,
+     r"(?im)^[ \t]*(?:great question|certainly|absolutely|of course|sure thing)!", 3,
      "drop the chat-style opener - prose isn't answering anyone"),
     ("'despite challenges ... continues to' arc",
      r"(?i)\bdespite\b[^.?!\n]{0,80}?\b(?:challenges|obstacles|setbacks|"
@@ -439,7 +439,7 @@ LANGUAGES = {
              r"(?i)\bno es\b[^.?!\n]{1,45}?\bes\b", 2,
              "di lo que es, sin el rodeo"),
             ("pregunta retórica de apertura",
-             r"(?im)^\s*(?:¿alguna vez te has preguntado|¿te has preguntado"
+             r"(?im)^[ \t]*(?:¿alguna vez te has preguntado|¿te has preguntado"
              r"|¿alguna vez has|imagina (?:un|una|que)|imagínate"
              r"|¿qué pasaría si)", 2,
              "abre con la idea, no con el gancho"),
@@ -509,7 +509,7 @@ LANGUAGES = {
              r"(?i)\bn[’']est pas\b[^.?!\n]{1,45}?\bc[’']est\b", 2,
              "dites simplement ce que c'est"),
             ("question rhétorique d'ouverture",
-             r"(?im)^\s*(?:vous êtes-vous déjà demandé|avez-vous déjà"
+             r"(?im)^[ \t]*(?:vous êtes-vous déjà demandé|avez-vous déjà"
              r"|et si|imaginez|qu[’']en serait-il si)\b", 2,
              "ouvrez sur l'idée, pas sur l'accroche"),
             ("empilement de précautions (peut/pourrait/souvent)",
@@ -575,7 +575,7 @@ LANGUAGES = {
              r"(?i)\bist (?:kein|keine|nicht)\b[^.?!\n]{1,45}?\bes ist\b", 2,
              "sag einfach, was es ist"),
             ("rhetorische Eröffnungsfrage",
-             r"(?im)^\s*(?:haben sie sich jemals gefragt"
+             r"(?im)^[ \t]*(?:haben sie sich jemals gefragt"
              r"|hast du dich jemals gefragt|stellen sie sich vor"
              r"|stell dir vor|was wäre, wenn|was wäre wenn)\b", 2,
              "beginn mit dem Punkt, nicht mit dem Köder"),
@@ -649,7 +649,7 @@ LANGUAGES = {
              r"(?i)\bnão é\b[^.?!\n]{1,45}?\bé\b", 2,
              "diga o que é, sem o rodeio"),
             ("pergunta retórica de abertura",
-             r"(?im)^\s*(?:você já se perguntou|já se perguntou"
+             r"(?im)^[ \t]*(?:você já se perguntou|já se perguntou"
              r"|já imaginou|imagine (?:um|uma|que)|e se)\b", 2,
              "abra com o ponto, não com a isca"),
             ("pilha de ressalvas (pode/poderia/frequentemente)",
@@ -714,7 +714,7 @@ LANGUAGES = {
              r"(?i)\bnon è\b[^.?!\n]{1,45}?\bè\b", 2,
              "di' semplicemente cos'è"),
             ("domanda retorica di apertura",
-             r"(?im)^\s*(?:ti sei mai chiesto|vi siete mai chiesti|hai mai"
+             r"(?im)^[ \t]*(?:ti sei mai chiesto|vi siete mai chiesti|hai mai"
              r"|immagina (?:un|una|che)|e se)\b", 2,
              "apri con il punto, non con l'esca"),
             ("pila di cautele (può/potrebbe/spesso)",
@@ -781,7 +781,7 @@ LANGUAGES = {
              r"(?i)\bis (?:geen|niet)\b[^.?!\n]{1,45}?\bhet is\b", 2,
              "zeg gewoon wat het is"),
             ("retorische openingsvraag",
-             r"(?im)^\s*(?:heb je je ooit afgevraagd"
+             r"(?im)^[ \t]*(?:heb je je ooit afgevraagd"
              r"|heeft u zich ooit afgevraagd|stel je voor"
              r"|stelt u zich voor|wat als)\b", 2,
              "open met het punt, niet met de lokker"),
@@ -852,7 +852,7 @@ LANGUAGES = {
              r"(?i)\bэто не\b[^.?!\n]{1,45}?,\s*а\b", 2,
              "просто скажи, что это"),
             ("риторический вопрос-зачин",
-             r"(?im)^\s*(?:задумывались ли вы|а что если"
+             r"(?im)^[ \t]*(?:задумывались ли вы|а что если"
              r"|представьте себе|представьте|вы когда-нибудь)\b", 2,
              "начни с сути, а не с крючка"),
             ("стопка оговорок (может/вероятно/обычно)",
@@ -921,7 +921,7 @@ LANGUAGES = {
              r"(?i)\bце не\b[^.?!\n]{1,45}?,\s*а\b", 2,
              "просто скажи, що це"),
             ("риторичне питання-зачин",
-             r"(?im)^\s*(?:чи замислювались ви|чи замислювалися ви"
+             r"(?im)^[ \t]*(?:чи замислювались ви|чи замислювалися ви"
              r"|а що якщо|уявіть собі|уявіть)\b", 2,
              "почни із суті, а не з гачка"),
             ("стос застережень (може/ймовірно/зазвичай)",
@@ -983,7 +983,7 @@ LANGUAGES = {
              r"(?i)\bto nie\b[^.?!\n]{1,45}?\btylko\b", 2,
              "powiedz wprost, czym to jest"),
             ("retoryczne pytanie otwierające",
-             r"(?im)^\s*(?:czy zastanawiałeś się|czy zastanawiałaś się"
+             r"(?im)^[ \t]*(?:czy zastanawiałeś się|czy zastanawiałaś się"
              r"|a co jeśli|wyobraź sobie|wyobraźcie sobie)\b", 2,
              "zacznij od sedna, nie od haczyka"),
             ("stos zastrzeżeń (może/często/zazwyczaj)",
@@ -1037,7 +1037,7 @@ LANGUAGES = {
              r"(?i)\bnení to\b[^.?!\n]{1,45}?\bje to\b", 2,
              "řekni prostě, co to je"),
             ("řečnická otázka na úvod",
-             r"(?im)^\s*(?:přemýšleli jste někdy|napadlo vás někdy"
+             r"(?im)^[ \t]*(?:přemýšleli jste někdy|napadlo vás někdy"
              r"|co kdyby|představte si)\b", 2,
              "začni podstatou, ne návnadou"),
             ("hromada výhrad (může/často/obvykle)",
@@ -1098,7 +1098,7 @@ LANGUAGES = {
              r"\w+(?:dır|dir|dur|dür|tır|tir|tur|tür)\b", 2,
              "ne olduğunu doğrudan söyle"),
             ("retorik açılış sorusu",
-             r"(?im)^\s*(?:hiç merak ettiniz mi|hiç düşündünüz mü"
+             r"(?im)^[ \t]*(?:hiç merak ettiniz mi|hiç düşündünüz mü"
              r"|hayal edin|bir düşünün)\b", 2,
              "kancayla değil, asıl noktayla aç"),
             # "-ebilir/-abilir" (can/may) is also a suffix, not a
@@ -1156,7 +1156,7 @@ LANGUAGES = {
              r"(?i)\bär inte\b[^.?!\n]{1,45}?\bdet är\b", 2,
              "säg helt enkelt vad det är"),
             ("retorisk inledningsfråga",
-             r"(?im)^\s*(?:har du någonsin undrat"
+             r"(?im)^[ \t]*(?:har du någonsin undrat"
              r"|har du någonsin funderat|tänk om|föreställ dig)\b", 2,
              "öppna med poängen, inte med kroken"),
             ("garderingsstapel (kan/ofta/vanligtvis)",
@@ -1211,7 +1211,7 @@ LANGUAGES = {
              r"(?i)\bnu este\b[^.?!\n]{1,45}?\beste\b", 2,
              "spune pur și simplu ce este"),
             ("întrebare retorică de deschidere",
-             r"(?im)^\s*(?:te-ai întrebat vreodată"
+             r"(?im)^[ \t]*(?:te-ai întrebat vreodată"
              r"|v-ați întrebat vreodată|ce-ar fi dacă|imaginează-ți"
              r"|imaginați-vă)\b", 2,
              "deschide cu ideea, nu cu cârligul"),
@@ -1268,7 +1268,7 @@ LANGUAGES = {
              r"(?i)\bnem csak\b[^.?!\n]{1,70}?\bhanem\b", 3,
              "mondd ki egyenesen, kontrasztkeret nélkül"),
             ("retorikai nyitókérdés",
-             r"(?im)^\s*(?:gondolkodtál már azon"
+             r"(?im)^[ \t]*(?:gondolkodtál már azon"
              r"|elgondolkodtál már azon|mi lenne ha|képzeld el"
              r"|képzeljük el)\b", 2,
              "a lényeggel nyiss, ne a csalival"),
@@ -1323,7 +1323,7 @@ LANGUAGES = {
              r"(?i)\bei ole\b[^.?!\n]{1,45}?\bvaan\b", 2,
              "sano suoraan mitä se on"),
             ("retorinen avauskysymys",
-             r"(?im)^\s*(?:oletko koskaan miettinyt"
+             r"(?im)^[ \t]*(?:oletko koskaan miettinyt"
              r"|oletko koskaan pohtinut|entä jos|kuvittele"
              r"|kuvitellaan)\b", 2,
              "avaa asialla, älä koukulla"),
@@ -1937,7 +1937,7 @@ def analyze(text, buzzwords=None, phrases=None, lang=None, lang_source=None):
     # drops the marker entirely and leads a paragraph with the bold label
     # ("**Term.** explanation")
     bold_bullets = len(re.findall(
-        r"(?m)^\s*(?:(?:[-*+]|[0-9]{1,3}[.)])\s+)?\*\*[^*\n]{1,45}?(?::\*\*|\*\*:|[.!?]\*\*)",
+        r"(?m)^[ \t]*(?:(?:[-*+]|[0-9]{1,3}[.)])\s+)?\*\*[^*\n]{1,45}?(?::\*\*|\*\*:|[.!?]\*\*)",
         text))
     if bold_bullets >= 3:
         raw += (bold_bullets - 2) * 2
