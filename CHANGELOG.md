@@ -3,7 +3,7 @@
 Newest first. Anyone pinning a tag in pre-commit or the Action can read here what a
 bump gets them. Versions before this file existed are reconstructed from the tags.
 
-## Unreleased
+## v0.10.0 - 2026-07-11
 
 - **Code mode.** `noslop file.py` now asks whether the *code* reads AI-written,
   with the same contract as prose mode: deterministic, local, every point a
