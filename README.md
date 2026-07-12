@@ -6,6 +6,7 @@
 [![License: Prosperity 3.0.0](https://img.shields.io/badge/license-Prosperity--3.0.0-blue.svg)](LICENSE)
 ![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![scores 0.0 on itself](https://img.shields.io/badge/own%20README-0.0%2F1k-brightgreen)
+![own code scores 0.0 in code mode](https://img.shields.io/badge/own%20code-0.0%2F100-brightgreen)
 ![16 languages](https://img.shields.io/badge/languages-16-blue)
 [![try it in your browser](https://img.shields.io/badge/try%20it-in%20your%20browser-orange)](https://munzzyy.github.io/noslop/)
 
@@ -16,7 +17,7 @@ one file you can read end to end, scoring your text on your own machine. Paste t
 paragraph in twice, a year apart, and the score doesn't move, because there's no model
 behind it to retrain.
 
-> **The proof is the product: this README scores 0.0/1k on noslop itself, and CI fails the build the day that stops being true.**
+> **The proof is the product: this README scores 0.0/1k on noslop itself, noslop.py scores 0.0/100 in its own code mode, and CI fails the build the day either stops being true.**
 
 Four ways to run it: paste into the [browser app](https://munzzyy.github.io/noslop/), drop the CLI into a pre-commit hook or CI, wire it into [reviewdog](#hooks) for inline PR comments, or install it as a skill so your AI coding agent checks its own prose before handing it back to you.
 
