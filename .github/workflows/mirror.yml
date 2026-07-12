@@ -22,7 +22,8 @@ jobs:
           printf '%s\n' "$KEY" > ~/.ssh/mirror_key
           chmod 600 ~/.ssh/mirror_key
           ssh-keyscan gitlab.com >> ~/.ssh/known_hosts 2>/dev/null
-          # NOTE: create gitlab.com/munzzyy/noslop (transfer the old mirror there and
-          # rename it from "unslop") so this backup target exists.
-          git remote add gitlab git@gitlab.com:munzzyy/noslop.git
+          # Stopgap: the GitLab project still lives at its old path (flight-unreached/unslop).
+          # Push there so the backup stays green; flip to munzzyy/noslop once the
+          # GitLab-side transfer + rename lands.
+          git remote add gitlab git@gitlab.com:flight-unreached/unslop.git
           GIT_SSH_COMMAND='ssh -i ~/.ssh/mirror_key' git push gitlab HEAD:refs/heads/main --tags --force
