@@ -1304,3 +1304,359 @@ def test_packaging_versions_match_the_module():
         assert 'version = "%s"' % noslop.__version__ in fh.read()
     with open(_repo_file(".claude-plugin", "plugin.json"), encoding="utf-8") as fh:
         assert json.load(fh)["version"] == noslop.__version__
+
+
+# ---------------------------------------------------------------------------
+# Code mode
+
+
+def test_extractor_url_in_string_is_not_a_comment():
+    p = noslop.extract_code_parts('const u = "https://x.com/a"; // real\n', "c")
+    assert [c[1] for c in p["comments"]] == ["real"]
+    assert any("https://x.com/a" in s for _, s in p["strings"])
+
+
+def test_extractor_hash_in_python_string_is_not_a_comment():
+    p = noslop.extract_code_parts('x = "#nope"\n# yes\n', "hash")
+    assert [c[1] for c in p["comments"]] == ["yes"]
+
+
+def test_extractor_docstring_vs_assigned_triple_string():
+    src = '"""Mod."""\n\ndef f():\n    """Doc."""\n    x = """data"""\n'
+    p = noslop.extract_code_parts(src, "hash")
+    assert [d[1] for d in p["docstrings"]] == ["Mod.", "Doc."]
+    assert any("data" in s for _, s in p["strings"])
+
+
+def test_extractor_block_comment_line_numbers():
+    p = noslop.extract_code_parts("int x;\n/* a\nb\nc */\nint y; // t\n", "c")
+    assert p["comments"][0][0] == 2 and p["comments"][1] == (5, "t")
+    assert p["loc"] == 2
+
+
+def test_extractor_rust_lifetime_does_not_swallow_file():
+    src = "fn f<'a>(x: &'a str) -> &'a str { x } // c1\n// c2\n"
+    p = noslop.extract_code_parts(src, "rust")
+    assert [c[1] for c in p["comments"]] == ["c1", "c2"]
+
+
+def test_extractor_rust_nested_block_comments():
+    p = noslop.extract_code_parts("/* o /* i */ still */ fn main() {}\n", "rust")
+    assert "still" in p["comments"][0][1] and "fn main" in p["code"]
+
+
+def test_extractor_js_template_literal_swallows_fake_comment():
+    p = noslop.extract_code_parts("const t = `x // no\n${y}`;\n// real\n", "c")
+    assert [c[1] for c in p["comments"]] == ["real"]
+
+
+def test_extractor_c_preprocessor_is_code():
+    p = noslop.extract_code_parts("#include <stdio.h>\nint m; // ok\n", "c")
+    assert [c[1] for c in p["comments"]] == ["ok"]
+    assert "#include" in p["code"]
+
+
+def test_extractor_unterminated_block_comment_does_not_crash():
+    p = noslop.extract_code_parts("/* open\nmore", "c")
+    assert "open" in p["comments"][0][1]
+
+
+def test_extractor_body_comments_exclude_column_zero_and_trailing():
+    src = "# top\ndef f():\n    # body\n    x = 1  # trailing\n"
+    p = noslop.extract_code_parts(src, "hash")
+    assert [c[1] for c in p["body_line_comments"]] == ["body"]
+
+
+def test_sniff_prefers_c_family_over_preprocessor_hashes():
+    assert noslop.sniff_code_family("#include <a>\n// x\n// y\n")[0] == "c"
+    assert noslop.sniff_code_family("# a\n# b\nx = 1\n")[0] == "hash"
+
+
+def test_code_schema_keys_are_pinned():
+    r = noslop.analyze_code("x = 1\n", ext=".py")
+    assert set(r) == noslop.JSON_SCHEMA_KEYS_CODE
+
+
+def test_code_truncation_marker_pins_hard_verdict():
+    src = "def f():\n    pass\n\n# ... rest of the code remains the same\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert r["score_per_100"] >= 25 and r["ai_artifacts"]
+
+
+def test_bare_rest_of_the_file_is_not_an_artifact():
+    src = "# The parser ignores the rest of the file after a null byte.\nx = 1\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert not r["ai_artifacts"]
+
+
+def test_markdown_fence_in_comment_is_paste_evidence():
+    src = "# ```python\nx = 1\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert r["score_per_100"] >= 25
+
+
+def test_fence_in_docstring_is_fine():
+    src = 'def f():\n    """Use it:\n\n    ```python\n    f()\n    ```\n    """\n'
+    r = noslop.analyze_code(src, ext=".py")
+    assert not r["ai_artifacts"]
+
+
+def test_claude_trailer_in_code_comment_is_paste_evidence():
+    src = "// Co-Authored-By: Claude <noreply@anthropic.com>\nint x;\n"
+    r = noslop.analyze_code(src, ext=".c")
+    assert r["score_per_100"] >= 25
+
+
+def test_chat_share_link_in_comment_is_paste_evidence():
+    src = "# see https://claude.ai/share/abc123\nx = 1\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert r["score_per_100"] >= 25
+
+
+def test_artifact_in_string_literal_is_excused():
+    # A detector (like this one) has to name the markers in string literals.
+    src = 'MARKERS = ["noreply@anthropic.com", "claude.ai/share"]\n'
+    r = noslop.analyze_code(src, ext=".py")
+    assert not r["ai_artifacts"]
+
+
+def test_quoted_mention_in_comment_is_excused():
+    src = '# The phrase "as an AI language model" pins the verdict.\nx = 1\n'
+    r = noslop.analyze_code(src, ext=".py")
+    assert not r["ai_artifacts"]
+
+
+def test_unquoted_disclaimer_in_comment_scores():
+    src = "# As an AI language model I cannot run this directly.\nx = 1\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert r["score_per_100"] >= 25
+
+
+def test_error_boilerplate_and_swallowed_handler():
+    src = ('try:\n    go()\nexcept Exception as e:\n'
+           '    print(f"An error occurred: {e}")\n')
+    r = noslop.analyze_code(src, ext=".py")
+    assert r["error_boilerplate"] and r["swallowed_errors"]
+
+
+def test_success_boilerplate_first_hit_free():
+    one = 'print("saved successfully")\n'
+    r = noslop.analyze_code(one, ext=".py")
+    assert len(r["success_boilerplate"]) == 1 and r["score_per_100"] == 0
+
+
+def test_redundant_comment_restating_next_line():
+    src = ("# increment the retry counter\nretry_counter += 1\n"
+           "# append the name to the results\nresults.append(name)\n")
+    r = noslop.analyze_code(src, ext=".py")
+    assert len(r["redundant_comments"]) >= 2
+
+
+def test_why_comment_is_not_redundant():
+    src = "# utf-8-sig: the export tool prepends a BOM on Windows\ndata = read(path)\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert not r["redundant_comments"]
+
+
+def test_todo_tagged_comments_are_exempt_from_redundancy():
+    src = "# TODO: retry counter reset\nretry_counter = 0\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert not r["redundant_comments"]
+
+
+def test_narration_needs_corroboration():
+    # Imperative body comments alone (2012-jQuery style) must not score.
+    lines = []
+    for i in range(6):
+        lines.append("def f%d():" % i)
+        lines.append("    # Create the widget for slot %d" % i)
+        lines.append("    build(%d)" % i)
+    r = noslop.analyze_code("\n".join(lines) + "\n", ext=".py")
+    assert r["narration_comment_count"] >= 4
+    assert not r["narration_scored"]
+    assert r["score_per_100"] < 10
+
+
+def test_narration_scores_once_corroborated():
+    lines = ['import os\n\ndef go():\n    """Go."""']
+    for i in range(6):
+        lines.append("    # Create the widget for slot %d" % i)
+        lines.append("    build(%d)" % i)
+    lines.append('    print(f"An error occurred: oops")')
+    r = noslop.analyze_code("\n".join(lines) + "\n", ext=".py")
+    assert r["narration_scored"]
+
+
+def test_docstring_name_echo():
+    src = 'def get_user_name(u):\n    """Get the user name."""\n    return u.name\n'
+    r = noslop.analyze_code(src, ext=".py")
+    assert len(r["docstring_name_echoes"]) == 1
+
+
+def test_informative_docstring_is_not_an_echo():
+    src = ('def get_user_name(u):\n'
+           '    """Prefers the display name; falls back to the login."""\n'
+           '    return u.display or u.login\n')
+    r = noslop.analyze_code(src, ext=".py")
+    assert not r["docstring_name_echoes"]
+
+
+def test_em_dash_and_curly_quotes_in_comments_score():
+    src = "# The parser — unlike the lexer — uses “smart” buffering\nx = 1\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert r["typography"]
+
+
+def test_emoji_in_log_string_counts_but_pure_emoji_data_does_not():
+    data_only = 'EMOJI = "✅❌"\n'
+    assert noslop.analyze_code(data_only, ext=".py")["emoji"] == 0
+    log = 'print("done ✅")\n'
+    assert noslop.analyze_code(log, ext=".py")["emoji"] == 1
+
+
+def test_invisible_char_outside_strings_is_an_artifact():
+    src = "x = 1  # tot" + chr(0x200B) + "al\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert any("invisible" in label for label, _, _ in r["ai_artifacts"])
+
+
+def test_invisible_char_inside_string_is_excused():
+    src = 's = "a' + chr(0x200B) + 'b"\n'
+    r = noslop.analyze_code(src, ext=".py")
+    assert not r["ai_artifacts"]
+
+
+def test_short_snippet_denominator_floor():
+    # One weight-2 hit in a 2-line snippet must not cross the soft verdict.
+    src = "# increment the counter\ncounter += 1\n"
+    r = noslop.analyze_code(src, ext=".py")
+    assert r["score_per_100"] < 10
+
+
+def test_report_code_smoke():
+    r = noslop.analyze_code("# Example usage\nx = 1\n", ext=".py")
+    out = noslop.report_code(r)
+    assert "AI-tell score" in out and "example usage" in out.lower()
+
+
+def test_cli_auto_code_mode_by_extension(tmp_path=None):
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as d:
+        p = os.path.join(d, "s.py")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("x = 1\n")
+        code, out = run_cli(["--no-config", "--json", p])
+        assert code == 0
+        assert json.loads(out)["mode"] == "code"
+
+
+def test_cli_prose_flag_overrides_code_extension():
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as d:
+        p = os.path.join(d, "s.py")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("plain text here\n")
+        code, out = run_cli(["--no-config", "--prose", "--json", p])
+        assert json.loads(out)["mode"] == "prose"
+
+
+def test_cli_code_flag_for_stdin(monkeypatch):
+    monkeypatch.setattr("sys.stdin", io.StringIO("// Example usage\nint x;\n"))
+    code, out = run_cli(["--no-config", "--code", "--json"])
+    assert json.loads(out)["mode"] == "code"
+
+
+def test_cli_mixed_prose_and_code_run():
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as d:
+        py = os.path.join(d, "s.py")
+        md = os.path.join(d, "n.md")
+        with open(py, "w", encoding="utf-8") as fh:
+            fh.write("x = 1\n")
+        with open(md, "w", encoding="utf-8") as fh:
+            fh.write("Plain human note.\n")
+        code, out = run_cli(["--no-config", "--json", py, md])
+        modes = [r["mode"] for r in json.loads(out)]
+        assert modes == ["code", "prose"]
+
+
+def test_cli_rdjson_for_code_findings():
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as d:
+        p = os.path.join(d, "s.py")
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("# ```python\nx = 1\n")
+        code, out = run_cli(["--no-config", "--rdjson", p])
+        rows = [json.loads(l) for l in out.strip().splitlines()]
+        assert rows and rows[0]["severity"] == "ERROR"
+        assert rows[0]["location"]["path"] == p
+
+
+def test_prose_mode_flags_coding_tool_trailers():
+    msg = ("Fix the flaky retry test\n\n"
+           "Co-Authored-By: Claude Opus <noreply@anthropic.com>\n")
+    r = noslop.analyze(msg)
+    assert r["score_per_1k"] >= 25
+    assert any("Claude Code" in label for label, _, _ in r["ai_artifacts"])
+
+
+def test_prose_mode_flags_chat_share_links():
+    r = noslop.analyze("Discussed at https://chatgpt.com/share/abc, see notes.")
+    assert r["score_per_1k"] >= 25
+
+
+def test_code_self_scan_stays_clean():
+    # The proof is the product: noslop.py in code mode scores itself under
+    # the soft threshold, and CI runs this same check.
+    with open(_repo_file("noslop.py"), encoding="utf-8") as fh:
+        r = noslop.analyze_code(fh.read(), ext=".py")
+    assert r["score_per_100"] < 10
+    with open(_repo_file("web", "detector.js"), encoding="utf-8") as fh:
+        r = noslop.analyze_code(fh.read(), ext=".js")
+    assert r["score_per_100"] < 10
+
+
+def test_shell_heredoc_body_is_not_comments():
+    # Payload lines inside a heredoc are text being written elsewhere, not
+    # shell comments - found by the cold verifier before 0.10.0 shipped.
+    src = ("#!/bin/bash\n"
+           "cat > cfg.sh << 'EOF'\n"
+           "# Step 1: build the image\n"
+           "# Step 2: push to registry\n"
+           "# Step 3: restart the service\n"
+           "EOF\n"
+           "echo done\n")
+    p = noslop.extract_code_parts(src, "shell")
+    assert not any("Step" in c for _, c in p["comments"])
+    r = noslop.analyze_code(src, ext=".sh")
+    assert not r["comment_patterns"]
+    assert r["score_per_100"] == 0
+
+
+def test_shell_comments_resume_after_heredoc_terminator():
+    src = ("cat <<EOF\nbody text\nEOF\n# real comment\n")
+    p = noslop.extract_code_parts(src, "shell")
+    assert [c[1] for c in p["comments"]] == ["real comment"]
+    assert any("body text" in s for _, s in p["strings"])
+
+
+def test_shell_tab_indented_heredoc_terminator():
+    src = "cat <<-EOF\n\tbody\n\tEOF\n# after\n"
+    p = noslop.extract_code_parts(src, "shell")
+    assert [c[1] for c in p["comments"]] == ["after"]
+
+
+def test_shell_arithmetic_shift_is_not_a_heredoc():
+    src = "x=$((1 << 20))\n# real comment\n"
+    p = noslop.extract_code_parts(src, "shell")
+    assert [c[1] for c in p["comments"]] == ["real comment"]
+
+
+def test_shell_unterminated_heredoc_does_not_crash():
+    p = noslop.extract_code_parts("cat <<EOF\n# never closed\n", "shell")
+    assert not p["comments"]
+
+
+def test_sniff_shell_shebang_picks_shell_family():
+    assert noslop.sniff_code_family("#!/bin/bash\ncat <<EOF\nx\nEOF\n")[0] == "shell"
+    assert noslop.sniff_code_family("#!/usr/bin/env bash\n")[0] == "shell"

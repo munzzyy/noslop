@@ -1,6 +1,6 @@
 # noslop
 
-**The only deterministic AI-writing linter that speaks 16 languages: English, Spanish, French, German, Portuguese (Brazil), Italian, Dutch, Russian, Ukrainian, Polish, Czech, Turkish, Swedish, Romanian, Hungarian, and Finnish. No model, no upload - it reads the text on your machine and prints the exact phrase to fix.**
+**The only deterministic AI-writing linter that speaks 16 languages: English, Spanish, French, German, Portuguese (Brazil), Italian, Dutch, Russian, Ukrainian, Polish, Czech, Turkish, Swedish, Romanian, Hungarian, and Finnish. No model, no upload - it reads the text on your machine and prints the exact phrase to fix. Since 0.10.0 it reads source code too: point it at a `.py`/`.js`/`.go`/`.rs` file and it shows you, line by line, what makes the code read AI-written.**
 
 [![CI](https://github.com/munzzyy/noslop/actions/workflows/test.yml/badge.svg)](https://github.com/munzzyy/noslop/actions/workflows/test.yml)
 [![License: Prosperity 3.0.0](https://img.shields.io/badge/license-Prosperity--3.0.0-blue.svg)](LICENSE)
@@ -166,6 +166,108 @@ The browser app follows along: its interface reads in 32 languages (pick from th
 menu), it shows which language it detected in your text, and you can override that per
 paste.
 
+## Code mode: was this code written by an AI?
+
+Give noslop a source file and it stops scoring prose and starts scoring code. Any
+of the usual extensions flips the mode automatically - Python, JavaScript,
+TypeScript, Go, Rust, Java, C, C++, C#, Ruby, shell, SQL, and a few dozen more -
+or force it with `--code` (stdin, odd extensions) and back with `--prose`.
+
+```
+$ noslop generated.py
+lines: 72 (25 code, 12 comment)   AI-tell score: 153.3/100 lines   -> reads as AI-written code
+language: Python
+
+Explainer-voice comments (written for the requester, not the maintainer):
+   2x  "example usage" (lines 4, 65)
+   1x  "import the necessary" (lines 8)
+   1x  "replace with your" (lines 67)
+   1x  "you can customize" (lines 71)
+
+Comment constructions:
+   3x  narrated step comments (Step 1 / Step 2 / ...) (lines 55, 57, 59)
+        -> comments that walk a reader through steps are chat narration - document why, not what
+
+Code habits:
+  - 2 stock error message(s) ('An error occurred...') (lines 25, 34)
+  - 1 catch-and-print handler(s) that swallow the error (lines 33)
+  - 2 comment(s) that restate the code they sit on (lines 57, 59)
+  - 1 docstring(s) that just restate the function name (lines 39)
+```
+
+Same contract as prose mode: no model, nothing leaves your machine, and every
+point on the score is a finding with a line number you can argue with. The file
+is first split into comments, docstrings, string literals, and code - by a real
+string-aware scanner, so a `//` inside a URL string never counts as a comment -
+and each check looks only where its evidence lives:
+
+- **chat residue in comments** - `Co-Authored-By: Claude` trailers,
+  `Generated with [Claude Code]` footers, Cursor/Devin trailers, links to
+  `claude.ai/share` or `chatgpt.com/share`, chatbot disclaimers, markdown
+  fences pasted into a comment, and truncation markers
+  (`# ... rest of the code remains the same`).
+  Nobody types these into a working file, so one hit scores the hard verdict,
+  same as prose artifacts. Absence proves nothing - these are the first thing
+  people strip.
+- **explainer-voice comments** - written for the requester instead of the next
+  maintainer: `Example usage`, `In a real application, you would...`, `You can
+  customize this as needed`, `Import the necessary libraries`, placeholder
+  paths like `path/to/your/...`.
+- **narrated walkthroughs** - `Step 1:` comments, `First, we...` / `Finally,
+  we...`, and body comments that open on a narration verb (Create/Check/
+  Iterate...). That last one is density-gated AND needs corroboration from
+  another finding class before it scores a point, because imperative comments
+  are also an old human habit - 2012-era jQuery in the eval corpus narrates
+  exactly this way and scores 0.0.
+- **comments that restate the code** - `# increment the counter` above
+  `counter += 1`, measured by how much of the comment's vocabulary is already
+  in the next line's identifiers. Docstrings that just restate the function
+  name (`def get_user_name` -> `"""Get the user name."""`) count the same way.
+- **the assistant's error handling** - `print(f"An error occurred: {e}")`,
+  `console.error` inside a catch that decides nothing, and the
+  `...successfully` victory-lap log line.
+- **typography and decoration** - em dashes, curly quotes, arrows, and
+  ellipsis characters in comments (editors type `--`, `->`, `...`; the
+  typographic forms arrive by paste), emoji in comments and log strings, and
+  invisible Unicode outside string literals (artifact tier - paste evidence at
+  best, prompt-injection surface at worst).
+- **the prose engine, on your comments** - the same 16-language buzzword and
+  filler-phrase lists run over comment and docstring text, so `robust` and
+  `it's important to note` cost the same there as in a README.
+
+Mention isn't use: a comment that *quotes* a tell in `"double quotes"` or
+`` `backticks` `` is talking about the phrase, not writing in it, and is
+excused - which is how noslop.py itself scores 0.0/100 in its own code mode
+with the test suite holding it there. String literals are treated as data, not
+style, so i18n catalogs and test fixtures don't count against you.
+
+Comment density, banner comments, 100% docstring coverage, uniform line
+lengths, and generic `result`/`data`/`temp` naming are reported as diagnostics
+but never scored - tutorial code, auto-formatters, and disciplined humans all
+produce those, and the research behind this mode says they can't carry an
+accusation on their own.
+
+Measured like prose mode: on the labeled code corpus in `eval/` the current
+engine has an AUC of **0.9643**, catches **92.9%** of the AI samples at the
+soft threshold (85.7% at the hard one), and flags **zero** of the fifteen
+human samples - with the
+corpus deliberately stacked with the human code most likely to false-positive
+(lodash's JSDoc-on-everything, kilo.c's teaching comments, TensorFlow's
+Args:/Returns: docstrings, Vue's non-native-English comments). CI enforces
+floors on all of it. The honest limits: a terse, agentic-CLI-style sample in
+the corpus scores 0.0 and is expected to - the published research is clear
+that surface tells can't reliably catch that register, and that human-edited
+AI code caps every detector, machine-learning ones included, near a 33% recall
+ceiling. A clean code score means none of these tells showed up. It does not
+mean a human wrote the file.
+
+```bash
+noslop src/*.py                   # code mode by extension
+noslop --code - < diff.txt        # force code mode for stdin
+noslop --prose weird_readme.py    # force prose mode the other way
+noslop --rdjson src/*.py | reviewdog -f=rdjsonl -name=noslop -reporter=github-pr-review
+```
+
 ## Install
 
 From PyPI (the command it installs is `noslop`):
@@ -236,7 +338,7 @@ With [pre-commit](https://pre-commit.com):
 ```yaml
 repos:
   - repo: https://github.com/munzzyy/noslop
-    rev: v0.9.0
+    rev: v0.10.0
     hooks:
       - id: noslop
 ```
@@ -246,7 +348,7 @@ That runs on the markdown, text, and rst files in each commit.
 As a GitHub Action, no pre-commit framework required:
 
 ```yaml
-- uses: munzzyy/noslop@v0.9.0
+- uses: munzzyy/noslop@v0.10.0
   with:
     paths: "docs/*.md README.md"
 ```

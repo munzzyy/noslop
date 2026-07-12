@@ -37,12 +37,15 @@ import math
 import fnmatch
 import argparse
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 
 # analyze()'s return dict is noslop's only machine-readable contract. If you
 # add, rename, or remove a top-level key, update this set and bump the
 # version - anything parsing --json is relying on these names staying put.
 JSON_SCHEMA_KEYS = {
+    # "mode" was added in 0.10.0 alongside code mode, so anything consuming
+    # mixed prose/code --json output can tell the two result shapes apart.
+    "mode",
     "words", "score_per_1k", "verdict", "language", "language_source",
     "buzzwords", "phrases", "patterns", "ai_artifacts",
     "em_dashes", "em_dash_excess", "emoji", "header_emoji",
@@ -143,8 +146,8 @@ PATTERNS = [
     # independent pattern study each. Verbs with a real human base rate in
     # technical prose (ensuring, demonstrating, signaling) are left out of
     # the closer list, and so are the ones already scored as buzzwords
-    # (underscoring, emphasizing, fostering, solidifying, showcasing) - one
-    # clause shouldn't pay twice. Apostrophes match straight or curly forms
+    # ("underscoring", "emphasizing", "fostering", "solidifying",
+    # "showcasing") - one clause shouldn't pay twice. Apostrophes match straight or curly forms
     # because patterns run on the raw text, not the normalized copy. The
     # 5th field, where present, is free hits: a single use of a device
     # that's legitimate rhetoric once (a lone triad, one wire-service
@@ -194,6 +197,20 @@ AI_ARTIFACTS = [
     ("chatbot citation residue (grok_card)", "grok_card"),
     ("chatgpt.com link-tracking parameter", "utm_source=chatgpt.com"),
     ("openai link-tracking parameter", "utm_source=openai"),
+    # Coding-tool signatures. Each one is a literal string the tool writes
+    # into commit messages and PR bodies by default, so presence is proof.
+    # Absence proves nothing - these are the first thing people strip.
+    # The Claude trailer is matched on the noreply address, not the name:
+    # "Co-Authored-By: Claude <...>" varies its display name by model, and
+    # a human co-author actually named Claude shouldn't trip it.
+    ("Claude Code commit trailer", "noreply@anthropic.com"),
+    ("Claude Code PR footer", "generated with [claude code]"),
+    ("Cursor agent commit trailer", "cursoragent@cursor.com"),
+    ("Devin commit trailer", "devin-ai-integration"),
+    ("AI chat share link", "claude.ai/share"),
+    ("AI chat share link", "chatgpt.com/share"),
+    ("AI chat share link", "chat.openai.com/share"),
+    ("AI chat share link", "gemini.google.com/share"),
     # "[Insert name]"-style placeholders are NOT in this list: humans write
     # those on purpose in mail-merge and resume templates, so they fail the
     # "nobody types these by hand" bar this class requires.
@@ -1975,6 +1992,7 @@ def analyze(text, buzzwords=None, phrases=None, lang=None, lang_source=None):
         verdict = "some AI tells - worth a pass"
 
     return {
+        "mode": "prose",
         "words": wc, "score_per_1k": score, "verdict": verdict,
         "language": code, "language_source": source,
         "buzzwords": buzz, "phrases": phr, "patterns": pat,
@@ -2091,6 +2109,1017 @@ def report(r, quiet=False):
     return "\n".join(out)
 
 
+# ---------------------------------------------------------------------------
+# Code mode: was this source file written by an AI?
+#
+# Same contract as the prose engine - deterministic, standard library only,
+# and every point on the score is a finding with a line number you can argue
+# with. The extractor splits a source file into comments, docstrings, string
+# literals, and blanked-out code BEFORE any rule runs, so a "//" inside a URL
+# string never reads as a comment and a "#" in a C preprocessor line never
+# does either. Each rule then looks only where its evidence lives: prose
+# tells in comments and docstrings, typography in comments, structure in the
+# code itself.
+
+# Comment/string syntax families. "line" markers run to end of line, "block"
+# pairs nest only where the language actually nests them (Rust), "triple"
+# turns on Python-style triple-quoted strings and docstring detection,
+# "backtick" turns on JS template literals, "quotes" lists the characters
+# that open a string. Lisp keeps only double quotes: a leading apostrophe
+# there is quote syntax, not a string.
+CODE_SYNTAX = {
+    "hash": {"line": ("#",), "block": (), "triple": True, "backtick": False,
+             "quotes": "'\"", "nested": False},
+    "shell": {"line": ("#",), "block": (), "triple": False, "backtick": False,
+              "quotes": "'\"", "nested": False, "heredoc": True},
+    "c": {"line": ("//",), "block": (("/*", "*/"),), "triple": False,
+          "backtick": True, "quotes": "'\"", "nested": False},
+    "rust": {"line": ("//",), "block": (("/*", "*/"),), "triple": False,
+             "backtick": False, "quotes": "\"", "nested": True},
+    "php": {"line": ("//", "#"), "block": (("/*", "*/"),), "triple": False,
+            "backtick": False, "quotes": "'\"", "nested": False},
+    "dash": {"line": ("--",), "block": (("/*", "*/"),), "triple": False,
+             "backtick": False, "quotes": "'\"", "nested": False},
+    "haskell": {"line": ("--",), "block": (("{-", "-}"),), "triple": False,
+                "backtick": False, "quotes": "\"", "nested": True},
+    "html": {"line": (), "block": (("<!--", "-->"),), "triple": False,
+             "backtick": False, "quotes": "'\"", "nested": False},
+    "lisp": {"line": (";",), "block": (), "triple": False, "backtick": False,
+             "quotes": "\"", "nested": False},
+    "percent": {"line": ("%",), "block": (), "triple": False,
+                "backtick": False, "quotes": "'\"", "nested": False},
+}
+
+# Extension -> (syntax family, display name). Extensions listed here flip a
+# file into code mode automatically; --code forces it for anything else.
+CODE_EXTENSIONS = {
+    ".py": ("hash", "Python"), ".pyw": ("hash", "Python"),
+    ".rb": ("hash", "Ruby"), ".rake": ("hash", "Ruby"),
+    ".sh": ("shell", "shell"), ".bash": ("shell", "shell"),
+    ".zsh": ("shell", "shell"), ".ksh": ("shell", "shell"),
+    ".ps1": ("hash", "PowerShell"), ".psm1": ("hash", "PowerShell"),
+    ".yml": ("hash", "YAML"), ".yaml": ("hash", "YAML"),
+    ".toml": ("hash", "TOML"), ".r": ("hash", "R"), ".jl": ("hash", "Julia"),
+    ".pl": ("hash", "Perl"), ".pm": ("hash", "Perl"),
+    ".nim": ("hash", "Nim"), ".cr": ("hash", "Crystal"),
+    ".ex": ("hash", "Elixir"), ".exs": ("hash", "Elixir"),
+    ".tcl": ("hash", "Tcl"),
+    ".c": ("c", "C"), ".h": ("c", "C"),
+    ".cpp": ("c", "C++"), ".cc": ("c", "C++"), ".cxx": ("c", "C++"),
+    ".hpp": ("c", "C++"), ".hh": ("c", "C++"), ".hxx": ("c", "C++"),
+    ".java": ("c", "Java"),
+    ".js": ("c", "JavaScript"), ".jsx": ("c", "JavaScript"),
+    ".mjs": ("c", "JavaScript"), ".cjs": ("c", "JavaScript"),
+    ".ts": ("c", "TypeScript"), ".tsx": ("c", "TypeScript"),
+    ".mts": ("c", "TypeScript"), ".cts": ("c", "TypeScript"),
+    ".go": ("c", "Go"), ".rs": ("rust", "Rust"),
+    ".cs": ("c", "C#"), ".swift": ("c", "Swift"),
+    ".kt": ("c", "Kotlin"), ".kts": ("c", "Kotlin"),
+    ".scala": ("c", "Scala"), ".dart": ("c", "Dart"),
+    ".m": ("c", "Objective-C"), ".mm": ("c", "Objective-C"),
+    ".groovy": ("c", "Groovy"), ".zig": ("c", "Zig"), ".v": ("c", "V"),
+    ".proto": ("c", "protobuf"),
+    ".css": ("c", "CSS"), ".scss": ("c", "SCSS"), ".less": ("c", "Less"),
+    ".php": ("php", "PHP"),
+    ".sql": ("dash", "SQL"), ".lua": ("dash", "Lua"), ".elm": ("dash", "Elm"),
+    ".hs": ("haskell", "Haskell"),
+    ".html": ("html", "HTML"), ".htm": ("html", "HTML"),
+    ".xml": ("html", "XML"), ".svg": ("html", "SVG"), ".vue": ("html", "Vue"),
+    ".lisp": ("lisp", "Lisp"), ".el": ("lisp", "Emacs Lisp"),
+    ".clj": ("lisp", "Clojure"), ".cljs": ("lisp", "Clojure"),
+    ".scm": ("lisp", "Scheme"), ".rkt": ("lisp", "Racket"),
+    ".tex": ("percent", "LaTeX"), ".sty": ("percent", "LaTeX"),
+    ".erl": ("percent", "Erlang"), ".hrl": ("percent", "Erlang"),
+}
+
+
+def sniff_code_family(text):
+    """Guess a syntax family for extensionless input (stdin with --code).
+    Counts comment markers at line starts, which is cruder than the
+    extension table but only has to pick a comment syntax, not a language.
+    A shell shebang is checked first: shell needs its own family for
+    heredoc handling."""
+    if re.match(r"#!\s*\S*/(?:env[ \t]+)?(?:ba|z|k|da)?sh\b", text):
+        return "shell", "shell"
+    heads = [ln.lstrip()[:4] for ln in text.split("\n")]
+    c_hits = sum(1 for h in heads if h.startswith(("//", "/*")))
+    hash_hits = sum(1 for h in heads if h.startswith("#") and
+                    not h.startswith(("#!", "#inc", "#def", "#ifd", "#ifn",
+                                      "#end", "#pra", "#els", "#und")))
+    dash_hits = sum(1 for h in heads if h.startswith("--"))
+    best = max(c_hits, hash_hits, dash_hits)
+    if best == 0 or best == hash_hits:
+        return "hash", "code"
+    if best == c_hits:
+        return "c", "code"
+    return "dash", "code"
+
+
+def extract_code_parts(text, family):
+    """Split source into comments, docstrings, strings, and blanked code.
+
+    Returns a dict with:
+      comments   - [(first line number, comment text)] per comment
+      docstrings - [(line, text)] (Python-style triple strings in doc
+                   position: first statement of a file, or right after a
+                   line ending in ":")
+      strings    - [(line, text)] other string literals
+      code       - the source with all of the above blanked to spaces,
+                   newlines kept, so regexes over it get real line numbers
+      loc        - lines with actual code on them after blanking
+      comment_line_count - distinct lines carrying comment text
+
+    One deliberate looseness: a single quote with no closing mate before
+    end of line is treated as code, not an unterminated string, so Rust
+    lifetimes ('a), Lisp quotes, and stray apostrophes don't swallow
+    everything after them."""
+    syntax = CODE_SYNTAX[family]
+    line_markers = syntax["line"]
+    blocks = syntax["block"]
+    quotes = syntax["quotes"]
+    n = len(text)
+    out = {"comments": [], "docstrings": [], "strings": [],
+           "body_line_comments": []}
+    code_out = []
+    comment_lines = set()
+    i, line = 0, 1
+    last_code_char = ""
+
+    def advance(j, keep):
+        nonlocal i, line
+        seg = text[i:j]
+        code_out.append(seg if keep else re.sub(r"[^\n]", " ", seg))
+        line += seg.count("\n")
+        i = j
+
+    while i < n:
+        ch = text[i]
+        # Shell heredocs: the body of `cat <<EOF ... EOF` is payload being
+        # written somewhere else, not shell - a "# Step 1" line inside one
+        # is text, not a comment. Bare delimiters must start uppercase or
+        # underscore (every real-world EOF/EOT/SQL does) so `$((1 << 20))`
+        # arithmetic and `<<<` here-strings never read as heredocs; quoted
+        # delimiters are unambiguous and can be anything.
+        if (syntax.get("heredoc") and text.startswith("<<", i)
+                and not text.startswith("<<<", i)
+                and (i == 0 or text[i - 1] != "<")):
+            hm = re.match(r"<<(-?)[ \t]*(?:(['\"])(\w+)\2|([A-Z_][A-Za-z0-9_]*))",
+                          text[i:])
+            if hm:
+                strip_tabs = hm.group(1) == "-"
+                word = hm.group(3) or hm.group(4)
+                nl = text.find("\n", i)
+                if nl == -1:
+                    advance(n, keep=True)
+                    continue
+                # The rest of the opener line stays code; the body runs to
+                # the line that is exactly the delimiter (bash is strict
+                # about that, so this is too).
+                advance(nl + 1, keep=True)
+                body_line = line
+                j = i
+                while j < n:
+                    eol = text.find("\n", j)
+                    eol = n if eol == -1 else eol
+                    cand = text[j:eol]
+                    if strip_tabs:
+                        cand = cand.lstrip("\t")
+                    if cand == word:
+                        break
+                    j = eol + 1 if eol < n else n
+                out["strings"].append((body_line, text[i:j]))
+                advance(j, keep=False)
+                continue
+        lm = next((m for m in line_markers if text.startswith(m, i)), None)
+        if lm is not None:
+            j = text.find("\n", i)
+            j = n if j == -1 else j
+            body = text[i + len(lm):j].strip()
+            out["comments"].append((line, body))
+            # A line comment alone on an *indented* line is a body comment -
+            # the kind that narrates the statement below it. Comments at
+            # column 0 (file/function docs) and trailing comments after code
+            # are collected above but excluded here.
+            ls = text.rfind("\n", 0, i) + 1
+            prefix = text[ls:i]
+            if prefix and not prefix.strip():
+                out["body_line_comments"].append((line, body))
+            comment_lines.add(line)
+            advance(j, keep=False)
+            continue
+        bm = next(((op, cl) for op, cl in blocks if text.startswith(op, i)), None)
+        if bm is not None:
+            op, cl = bm
+            start_line = line
+            depth, j = 1, i + len(op)
+            while j < n and depth:
+                if syntax["nested"] and text.startswith(op, j):
+                    depth += 1
+                    j += len(op)
+                elif text.startswith(cl, j):
+                    depth -= 1
+                    j += len(cl)
+                else:
+                    j += 1
+            body = text[i + len(op):j - len(cl)] if depth == 0 else text[i + len(op):j]
+            out["comments"].append((start_line, body.strip()))
+            for k in range(start_line, start_line + body.count("\n") + 1):
+                comment_lines.add(k)
+            advance(j, keep=False)
+            continue
+        if syntax["triple"] and text.startswith(('"""', "'''"), i):
+            q = text[i:i + 3]
+            start_line = line
+            jc = text.find(q, i + 3)
+            body = text[i + 3:jc] if jc != -1 else text[i + 3:]
+            j = jc + 3 if jc != -1 else n
+            # Doc position: nothing but whitespace before it in the file so
+            # far, or the last real code character is the ":" that closed a
+            # def/class line. Assignments (x = """...""") stay strings.
+            if last_code_char in ("", ":"):
+                out["docstrings"].append((start_line, body.strip()))
+            else:
+                out["strings"].append((start_line, body))
+            advance(j, keep=False)
+            continue
+        if ch in quotes:
+            j = i + 1
+            closed = False
+            while j < n:
+                cj = text[j]
+                if cj == "\\":
+                    j += 2
+                    continue
+                if cj == ch:
+                    closed = True
+                    break
+                if cj == "\n":
+                    break
+                j += 1
+            if closed:
+                out["strings"].append((line, text[i + 1:j]))
+                advance(j + 1, keep=False)
+            else:
+                advance(i + 1, keep=True)
+                last_code_char = ch
+            continue
+        if syntax["backtick"] and ch == "`":
+            start_line = line
+            j = i + 1
+            while j < n:
+                if text[j] == "\\":
+                    j += 2
+                    continue
+                if text[j] == "`":
+                    break
+                j += 1
+            out["strings"].append((start_line, text[i + 1:min(j, n)]))
+            advance(min(j + 1, n), keep=False)
+            continue
+        # Plain code: consume up to the next character anything above could
+        # care about, in one slice rather than one char at a time.
+        j = i
+        while j < n:
+            cj = text[j]
+            if cj in quotes or (syntax["backtick"] and cj == "`"):
+                break
+            if any(text.startswith(m, j) for m in line_markers):
+                break
+            if any(text.startswith(op, j) for op, cl in blocks):
+                break
+            if syntax["triple"] and text.startswith(('"""', "'''"), j):
+                break
+            if (syntax.get("heredoc") and cj == "<" and j > i
+                    and text.startswith("<<", j)):
+                break
+            j += 1
+        j = max(j, i + 1)
+        seg = text[i:j]
+        stripped = seg.rstrip()
+        if stripped:
+            last_code_char = stripped[-1]
+        advance(j, keep=True)
+
+    code = "".join(code_out)
+    out["code"] = code
+    out["loc"] = sum(1 for ln in code.split("\n") if ln.strip())
+    out["comment_line_count"] = len(comment_lines)
+    return out
+
+
+# Chat residue in comments - evidence the file passed through a chat window,
+# not a style habit. Matched with word boundaries over comment/docstring text
+# only; one hit pins the score at the hard verdict, same as prose artifacts.
+CODE_ARTIFACT_PHRASES = [
+    ("chatbot self-reference", "as an ai language model"),
+    ("chatbot self-reference", "as an ai model"),
+    ("chatbot self-reference", "as an ai assistant"),
+    ("chat framing left in a comment", "certainly! here"),
+    ("chat framing left in a comment", "here's the updated code"),
+    ("chat framing left in a comment", "here is the updated code"),
+    ("chat framing left in a comment", "here's the complete code"),
+    ("chat framing left in a comment", "here is the complete code"),
+    ("chat framing left in a comment", "here's the full code"),
+    ("chat framing left in a comment", "i hope this helps"),
+    ("chat framing left in a comment", "hope this helps"),
+]
+
+# Truncation markers: the "// ... rest of the code remains the same" a chat
+# window prints when it elides code. Nobody types these into a working file.
+# Each branch requires the elision context (a literal "..." or a
+# remains/stays/unchanged claim) - a bare "rest of the file" is something a
+# person can write about a file, and this tier can't afford that.
+CODE_TRUNCATION_RE = re.compile(
+    r"(?i)(?:\.\.\.\s*\(?\s*rest of (?:the|your) (?:code|file|function|class|script|implementation)\b"
+    r"|\brest of (?:the|your) (?:code|file|function|class|script|implementation)"
+    r" (?:remains|stays|is) (?:the same|unchanged)\b"
+    r"|\.\.\.\s*existing code|\bexisting code (?:remains|stays|goes here)\b"
+    r"|\byour (?:code|implementation|logic) goes here\b)")
+
+# Explainer-voice comment phrases: the assistant narrating to the requester
+# instead of documenting for the next maintainer. Weight 3 per hit, like
+# prose phrases. Word-boundary matched over comments and docstrings.
+CODE_COMMENT_PHRASES = [
+    "in a real application", "in a real-world application", "in a real app",
+    "in production, you would", "in a production environment",
+    "for demonstration purposes", "for the sake of simplicity",
+    "for simplicity, we", "this is a simplified",
+    "you can customize", "you can modify", "you can adjust", "you can extend",
+    "adjust as needed", "modify as needed", "customize as needed",
+    "adjust this as needed", "change as needed",
+    "replace with your", "replace this with your", "replace these with your",
+    "add your own", "your actual api key", "insert your api key",
+    "add your api key", "replace with the actual",
+    "import the necessary", "import necessary", "necessary imports",
+    "the following code", "the code below", "the above code",
+    "this function is responsible for",
+    "main entry point", "entry point of the",
+    "example usage", "usage example", "sample usage",
+]
+
+# Comment-shape patterns, matched with (?m) over comment text one line at a
+# time. (label, regex, weight, hint, free hits, gated). Gated patterns are
+# the walkthrough voice - and humans have used that voice too (CPython's
+# idna.py numbers its comments straight out of RFC 3490's steps), so like
+# the narration-verb check they only score once another finding class has
+# corroborated the file. Ungated patterns are residue, not voice, and score
+# on their own.
+CODE_COMMENT_PATTERNS = [
+    ("narrated step comments (Step 1 / Step 2 / ...)",
+     r"(?mi)^(?:step\s*\d+|\d+[.)])\s*:?\s+[a-z]", 2,
+     "comments that walk a reader through steps are chat narration - document why, not what",
+     1, True),
+    ("'First/Next/Then/Finally, we...' narration",
+     r"(?mi)^(?:first|next|then|now|finally)\b,?\s+(?:we|let's|you)\b", 2,
+     "the walkthrough voice - a maintainer needs the why, not a tour",
+     1, True),
+    ("'Here we/Here, we...' narration",
+     r"(?mi)^here,?\s+we\b", 2,
+     "narrating the code to a reader is chat voice", 1, True),
+    ("placeholder path (path/to/your...)",
+     r"(?i)\bpath/to/your\b", 2,
+     "a template path the chat answer expected you to fill in", 0, False),
+]
+
+# Buzzwords that mean something else near code: "underscore" in a comment is
+# almost always the character, not the LLM verb (three stdlib files scored on
+# it in the mass false-positive sweep). Skipped in code mode only; the -ing
+# form still reads verbal and stays.
+CODE_BUZZWORD_EXCLUSIONS = frozenset(("underscore", "underscores"))
+
+
+# Identifiers with no domain in them. Report-only: generic naming is at
+# least as junior-dev as it is AI, so it never moves the score - it's
+# printed as a diagnostic for a reviewer to weigh.
+_GENERIC_IDENTIFIERS = frozenset((
+    "result", "results", "data", "temp", "item", "items", "output",
+    "response", "res", "obj", "info",
+))
+
+# Generic error-message boilerplate: the assistant's stock catch-and-print.
+# Matched over the ORIGINAL text (strings are blanked in the code view), and
+# a commented-out copy is the same evidence. Case-insensitive.
+CODE_ERROR_BOILERPLATE_RE = re.compile(
+    r"(?i)(?:print\s*\(|console\.(?:log|error|warn)\s*\(|"
+    r"System\.(?:out|err)\.println\s*\(|fmt\.Println\s*\(|echo\s+|"
+    r"logger?\.(?:error|info|warning)\s*\(|eprintln!\s*\(|puts\s+)"
+    r"\s*f?[\"'`](?:an (?:unexpected )?error occurred|error occurred"
+    r"|something went wrong|an error has occurred|oops[,!]|error:\s*\{)")
+
+# The victory lap: printing "... successfully" after routine operations.
+# Humans log states and errors; the assistant congratulates the run.
+CODE_SUCCESS_BOILERPLATE_RE = re.compile(
+    r"(?i)(?:print\s*\(|console\.log\s*\(|System\.out\.println\s*\(|"
+    r"fmt\.Println\s*\(|echo\s)[^\n]{0,60}?successfully")
+
+# except/catch that only prints and moves on - the assistant's way of
+# looking careful without deciding anything. Per-language variants.
+CODE_SWALLOWED_ERROR_RE = re.compile(
+    r"(?m)^[ \t]*except Exception as e:\s*\n[ \t]*print\s*\("
+    r"|catch\s*\(\s*(?:error|err|e|ex|exception)\s*(?::[^)]*)?\)\s*\{\s*\n?\s*console\.(?:log|error)\s*\(")
+
+# Typography in comments/docstrings. Editors type straight quotes, "--",
+# "->", and "..."; chat output renders the typographic forms. In prose some
+# of these need an allowance; inside source comments they're rare enough in
+# human code to score per hit.
+CODE_TYPOGRAPHY = [
+    ("em dash in a comment", "—", 2,
+     "editors type -- ; the em dash character is chat-render residue"),
+    ("curly quote in a comment", "‘’“”", 2,
+     "editors type straight quotes; curly ones arrive by paste"),
+    ("arrow character in a comment", "→⇒", 1,
+     "-> is what people type; the arrow glyph is rendered output"),
+    ("ellipsis character in a comment", "…", 1,
+     "three dots typed is ...; the single glyph is rendered output"),
+]
+
+# Invisible characters anywhere outside string literals are paste evidence
+# at best and prompt-injection surface at worst. Artifact tier.
+INVISIBLE_CHARS = "".join(chr(c) for c in
+                          (0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x00AD))
+
+# Words a comment shares with the identifiers on the very next code line.
+# These function words don't count toward the overlap.
+_COMMENT_STOPWORDS = frozenset((
+    "the", "a", "an", "to", "of", "in", "for", "and", "or", "is", "this",
+    "that", "with", "on", "it", "we", "be", "as", "are", "if", "then",
+    "will", "its", "from", "by", "at", "into", "our", "all", "each",
+))
+
+# Narration verbs: the imperative a chat assistant opens a walkthrough
+# comment with ("Create the new todo object", "Iterate over the users").
+# Used two ways: excluded from the redundancy overlap (the verb isn't in
+# the code, the nouns are), and counted as a density signal over indented
+# body comments. Indented-only keeps the check off doc comments above
+# functions, where imperative mood is a legitimate human convention
+# ("Create a new sds string..." - redis).
+_NARRATION_VERBS = frozenset((
+    "create", "creates", "initialize", "initializes", "define", "defines",
+    "declare", "set", "sets", "get", "gets", "check", "checks", "iterate",
+    "iterates", "loop", "loops", "convert", "converts", "sort", "sorts",
+    "print", "prints", "collect", "collects", "normalize", "normalizes",
+    "skip", "skips", "increment", "increments", "decrement", "send",
+    "sends", "close", "closes", "open", "opens", "return", "returns",
+    "extract", "extracts", "combine", "combines", "slice", "clear",
+    "clears", "update", "updates", "add", "adds", "remove", "removes",
+    "filter", "filters", "parse", "parses", "load", "loads", "save",
+    "saves", "fetch", "fetches", "handle", "handles", "process",
+    "calculate", "calculates", "compute", "computes", "generate",
+    "generates", "validate", "validates", "read", "reads", "write",
+    "writes", "append", "appends", "insert", "inserts", "delete",
+    "deletes", "search", "searches", "find", "finds", "build", "builds",
+    "make", "makes", "start", "starts", "stop", "stops", "run", "runs",
+    "call", "calls", "import", "imports", "render", "renders", "display",
+    "displays", "show", "shows", "store", "stores", "retrieve",
+    "retrieves", "wait", "waits",
+))
+
+
+def _ident_tokens(code_line):
+    """Identifier words on a code line: snake_case and camelCase split into
+    lowercase word pieces, so 'user_count' and 'userCount' both yield
+    {'user', 'count'}."""
+    toks = set()
+    for ident in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", code_line):
+        for part in ident.split("_"):
+            for w in re.findall(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])", part):
+                if len(w) >= 2:
+                    toks.add(w.lower())
+    return toks
+
+
+def _word_matches_tokens(word, tokens):
+    if word in tokens:
+        return True
+    # Light stemming both ways: "initializes" matches "init"-ish tokens and
+    # "config" matches "configuration". Four-char minimum keeps "in"/"int"
+    # from matching everything.
+    for t in tokens:
+        if len(t) >= 4 and word.startswith(t):
+            return True
+        if len(word) >= 4 and t.startswith(word):
+            return True
+    return False
+
+
+def redundant_comments(comments, code_text):
+    """Line comments that restate the code they sit on or above - the
+    '# increment the counter' above 'counter += 1'. Returns (line, comment)
+    pairs where roughly two-thirds of the comment's content words appear
+    among the identifiers of the same or next code line. TODO/FIXME-style
+    tags and short comments are exempt."""
+    code_lines = code_text.split("\n")
+    hits = []
+    for line, body in comments:
+        text = body.strip()
+        if not text or re.match(r"(?i)^(?:todo|fixme|xxx|hack|note|nb|warning|see|https?:)\b", text):
+            continue
+        # A comment that IS code - the equivalent expression in another
+        # language (CPython's _ios_support.py mirrors each ctypes call with
+        # "device = [UIDevice currentDevice]") or commented-out code - maps
+        # onto the next line by design. Same for "Step N" labels, which are
+        # spec references, not restatements.
+        if "=" in text or text.endswith(";") or re.match(r"(?i)step\s*\d+\b", text):
+            continue
+        words = [w.lower() for w in re.findall(r"[A-Za-z][A-Za-z0-9'-]*", text)]
+        # Narration verbs are excluded from the overlap: in "Add the product
+        # to the list", the verb isn't in the code - the nouns are, and the
+        # nouns are what make the comment redundant.
+        content = [w for w in words if w not in _COMMENT_STOPWORDS and
+                   w not in _NARRATION_VERBS and len(w) >= 2]
+        if len(content) < 2 or len(words) < 3:
+            continue
+        # Candidate code lines: the comment's own line (trailing comment),
+        # then the next two lines with code on them.
+        tokens = set()
+        found_code = 0
+        for cand in range(line, min(line + 4, len(code_lines) + 1)):
+            cl = code_lines[cand - 1] if cand - 1 < len(code_lines) else ""
+            if cl.strip():
+                tokens |= _ident_tokens(cl)
+                found_code += 1
+                if found_code == 2 and cand > line:
+                    break
+        if not tokens:
+            continue
+        matched = sum(1 for w in content if _word_matches_tokens(w, tokens))
+        if matched / len(content) >= 0.65:
+            hits.append((line, text))
+    return hits
+
+
+def docstring_name_echoes(docstrings, code_text):
+    """Python docstrings whose first line just restates the function name:
+    def get_user_name -> \"\"\"Get the user name.\"\"\". Returns (line, text)."""
+    code_lines = code_text.split("\n")
+    def_names = {}
+    for m in re.finditer(r"(?m)^[ \t]*(?:async[ \t]+)?def[ \t]+(\w+)", code_text):
+        def_names[code_text.count("\n", 0, m.start()) + 1] = m.group(1)
+    hits = []
+    for line, body in docstrings:
+        first = body.split("\n")[0].strip()
+        words = [w.lower() for w in re.findall(r"[A-Za-z][A-Za-z0-9]*", first)]
+        content = [w for w in words if w not in _COMMENT_STOPWORDS]
+        if not content:
+            continue
+        name = None
+        for back in range(line - 1, max(line - 4, 0), -1):
+            if back in def_names:
+                name = def_names[back]
+                break
+            if back - 1 < len(code_lines) and code_lines[back - 1].strip():
+                break
+        if not name:
+            continue
+        tokens = _ident_tokens(name)
+        if len(content) <= len(tokens) + 1 and all(
+                _word_matches_tokens(w, tokens) for w in content):
+            hits.append((line, first))
+    return hits
+
+
+JSON_SCHEMA_KEYS_CODE = {
+    "mode", "code_language", "lines", "sloc", "comment_lines",
+    "comment_share", "words", "score_per_100", "verdict",
+    "language", "language_source",
+    "ai_artifacts", "buzzwords", "phrases", "comment_patterns",
+    "comment_phrases", "typography", "emoji", "error_boilerplate",
+    "swallowed_errors", "redundant_comments", "docstring_name_echoes",
+    "success_boilerplate", "narration_comments", "narration_comment_count",
+    "narration_scored", "corroborated",
+    "invisible_chars", "comment_sentence_share", "docstring_coverage",
+    "banner_comments", "line_length_cv", "generic_identifier_share",
+}
+
+
+def analyze_code(text, ext=None, config=None, lang=None):
+    """Score one source file for AI-written tells. ext picks the comment
+    syntax (falls back to sniffing); lang forces the prose pack used on the
+    comment text; config is a parsed .noslop.json applied to that pack."""
+    text = re.sub("\\r\\n?|[\\x1c-\\x1f\\x85\\u2028\\u2029]", "\n", text)
+    if ext and ext.lower() in CODE_EXTENSIONS:
+        family, code_language = CODE_EXTENSIONS[ext.lower()]
+    else:
+        family, code_language = sniff_code_family(text)
+    parts = extract_code_parts(text, family)
+    total_lines = text.count("\n") + 1
+    sloc = parts["loc"]
+
+    # The prose the file carries: every comment and docstring flattened to
+    # one line each, with a map back to real line numbers, so the prose
+    # engine's word lists and the comment-shape patterns run over exactly
+    # the text a human would read as prose.
+    prose_entries = []
+    for line, body in parts["comments"] + sorted(parts["docstrings"]):
+        for off, piece in enumerate(body.split("\n")):
+            prose_entries.append((line + off, piece.strip()))
+    prose_entries.sort()
+    # Mention-vs-use: a comment that QUOTES a tell ("as an AI" in double
+    # quotes or `backticks`) is talking about the phrase, not writing in it -
+    # the same escape hatch prose mode gives via code formatting. Quoted
+    # spans are blanked to spaces (lengths kept, so line mapping and match
+    # offsets stay honest) before any comment-text rule runs.
+    def _blank_quoted(s):
+        s = re.sub(r'"[^"\n]{0,120}"', lambda m: " " * len(m.group()), s)
+        return re.sub(r"`[^`\n]{0,120}`", lambda m: " " * len(m.group()), s)
+
+    prose_text = "\n".join(_blank_quoted(p) for _, p in prose_entries)
+    prose_lower = prose_text.lower().replace("’", "'")
+
+    def real_line(idx):
+        pseudo = prose_text.count("\n", 0, idx)
+        return prose_entries[pseudo][0] if pseudo < len(prose_entries) else 1
+
+    if lang is None or lang == "auto":
+        pack_code, lang_source = detect_language(prose_text)
+    else:
+        pack_code, lang_source = lang, "forced"
+    pack = LANGUAGES[pack_code]
+    buzzwords, phrases = pack["buzzwords"], pack["phrases"]
+    if config is not None:
+        buzzwords, phrases = apply_config(config, buzzwords, phrases)
+
+    # Buzzwords and filler phrases in comments, same overlap resolution as
+    # prose so a phrase hit doesn't double-count the buzzword inside it.
+    spans = []
+    for w in buzzwords:
+        if w in CODE_BUZZWORD_EXCLUSIONS:
+            continue
+        spans += [(s, e, "buzz", w) for s, e in find_all(prose_lower, w)]
+    for p in phrases:
+        spans += [(s, e, "phrase", p) for s, e in find_all(prose_lower, p)]
+    for p in CODE_COMMENT_PHRASES:
+        spans += [(s, e, "cphrase", p) for s, e in find_all(prose_lower, p)]
+    spans.sort(key=lambda h: (h[0], -h[1]))
+    kept, last_end = [], -1
+    for s, e, kind, key in spans:
+        if s >= last_end:
+            kept.append((s, kind, key))
+            last_end = e
+
+    def tally(which):
+        counts = {}
+        for s, kind, key in kept:
+            if kind == which:
+                counts.setdefault(key, []).append(s)
+        rows = [(key, len(starts), [real_line(s) for s in starts[:5]])
+                for key, starts in counts.items()]
+        rows.sort(key=lambda x: -x[1])
+        return rows
+
+    buzz = tally("buzz")
+    phr = tally("phrase")
+    cphr = tally("cphrase")
+
+    # Chat residue: the shared prose artifact phrases (chatbot disclaimers
+    # in a comment are still chatbot disclaimers), the code-specific chat
+    # framings, truncation markers, and invisible characters outside
+    # strings. Any hit pins the hard verdict.
+    art_rows = {}
+    for label, needle in AI_ARTIFACT_PHRASES + CODE_ARTIFACT_PHRASES:
+        for s, e in find_all(prose_lower, needle):
+            art_rows.setdefault(label, []).append(real_line(s))
+    # Markup artifacts are scanned over code and comments but NOT string
+    # literals: a string is data, and any tool that handles these markers
+    # (including this one) has to name them in strings to do its job.
+    code_lower = parts["code"].lower()
+    for label, needle in AI_ARTIFACTS:
+        for s, e in find_all_plain(code_lower, needle):
+            art_rows.setdefault(label, []).append(line_of(parts["code"], s))
+        for s, e in find_all_plain(prose_lower, needle):
+            art_rows.setdefault(label, []).append(real_line(s))
+    for m in CODE_TRUNCATION_RE.finditer(prose_text):
+        art_rows.setdefault("chat truncation marker ('... rest of the code')",
+                            []).append(real_line(m.start()))
+    fence_lines = [ln for ln, body in parts["comments"] if "```" in body]
+    for ln in fence_lines:
+        art_rows.setdefault("markdown fence inside a comment", []).append(ln)
+    # Invisible characters count against the original text for line numbers,
+    # but occurrences inside string literals are excused: a test fixture or
+    # i18n catalog legitimately carries zero-width characters as data.
+    inv_lines = []
+    for ch in INVISIBLE_CHARS:
+        inv_lines += [line_of(text, m.start())
+                      for m in re.finditer(re.escape(ch), text)]
+    string_text = "\n".join(s for _, s in parts["strings"])
+    inv_in_strings = sum(string_text.count(ch) for ch in INVISIBLE_CHARS)
+    inv_scored = max(0, len(inv_lines) - inv_in_strings)
+    if inv_scored:
+        art_rows["invisible unicode character"] = sorted(inv_lines)[:5]
+    artifacts = [(label, len(lines), sorted(lines)[:5])
+                 for label, lines in art_rows.items() if lines]
+    artifacts.sort(key=lambda x: -x[1])
+    art_total = sum(n for _, n, _ in artifacts)
+
+    # Comment-shape patterns over the flattened prose lines. Gated patterns
+    # accumulate separately and only join the score if the file is
+    # corroborated (decided below, once every finding class is in).
+    cpat, cpat_raw, cpat_raw_gated = [], 0, 0
+    for label, rx, weight, hint, free, gated in CODE_COMMENT_PATTERNS:
+        matches = list(re.finditer(rx, prose_text))
+        if matches:
+            cpat.append((label, len(matches), weight, hint,
+                         [real_line(m.start()) for m in matches[:5]], gated))
+            points = max(0, len(matches) - free) * weight
+            if gated:
+                cpat_raw_gated += points
+            else:
+                cpat_raw += points
+
+    # Typography in comments/docstrings only - string literals hold data
+    # (i18n catalogs, test fixtures) and stay out of these counts.
+    typography = []
+    typo_raw = 0
+    for label, chars, weight, hint in CODE_TYPOGRAPHY:
+        lines = []
+        for ch in chars:
+            lines += [real_line(m.start())
+                      for m in re.finditer(re.escape(ch), prose_text)]
+        if lines:
+            typography.append((label, len(lines), weight, hint, sorted(lines)[:5]))
+            typo_raw += len(lines) * weight
+
+    # Emoji in comments (quoted mentions already excused), in code regions
+    # (JSX text and template bodies - exactly where an assistant decorates
+    # the UI copy), and in strings that carry actual words. A string of
+    # bare emoji with no words is a data table, not decoration.
+    emoji_n = len(EMOJI.findall(prose_text))
+    emoji_n += len(EMOJI.findall(parts["code"]))
+    for _, s in parts["strings"]:
+        if re.search(r"[A-Za-z]{3}", s):
+            emoji_n += len(EMOJI.findall(s))
+
+    err_boiler = [line_of(text, m.start())
+                  for m in CODE_ERROR_BOILERPLATE_RE.finditer(text)]
+    success_boiler = [line_of(text, m.start())
+                      for m in CODE_SUCCESS_BOILERPLATE_RE.finditer(text)]
+    swallowed = [line_of(text, m.start())
+                 for m in CODE_SWALLOWED_ERROR_RE.finditer(text)]
+
+    # Narration-verb comment openers ("Create the new todo object", "Iterate
+    # over the users"), measured over indented body comments only and scored
+    # past a density gate: one imperative comment is a human writing a note,
+    # a file where nearly every body comment opens on Create/Check/Iterate
+    # is a walkthrough.
+    body_comments = [(ln, t) for ln, t in parts["body_line_comments"]
+                     if len(t.split()) >= 2]
+    narrated = []
+    for ln, t in body_comments:
+        first = t.split()[0].strip(",.:;!")
+        if len(first) >= 2 and first.isupper():
+            continue  # "HANDLE: ..." tags are a human convention
+        if first.lower() in _NARRATION_VERBS:
+            narrated.append((ln, t))
+    redundant = redundant_comments(parts["comments"], parts["code"])
+    echoes = docstring_name_echoes(parts["docstrings"], parts["code"]) \
+        if family == "hash" else []
+
+    # Corroboration gate: the walkthrough voice - imperative body comments,
+    # Step 1/Step 2 numbering, "First, we..." - was a human convention long
+    # before chat assistants (2012 jQuery and CPython's RFC-step comments in
+    # the eval sweeps both write this way), so that class never scores on
+    # its own. It only counts once something OUTSIDE the class already reads
+    # AI - at which point wall-to-wall narration is confirming evidence, not
+    # the accusation itself. Gated patterns don't corroborate each other.
+    corroborated = bool(
+        art_rows or buzz or phr or cphr or typography or
+        any(not row[5] for row in cpat) or
+        emoji_n or err_boiler or swallowed or redundant or echoes or
+        len(success_boiler) >= 2)
+    narration_scored = (corroborated and len(narrated) >= 4 and
+                        len(narrated) / max(len(body_comments), 1) >= 0.4)
+
+    # Report-only diagnostics, never scored: tutorial code and disciplined
+    # human codebases (CPython's comment style guide asks for full
+    # sentences) legitimately sit high on both.
+    comment_share = round(parts["comment_line_count"] /
+                          max(sloc + parts["comment_line_count"], 1), 2)
+    sentence_comments = 0
+    counted_comments = 0
+    for _, body in parts["comments"]:
+        t = body.strip()
+        if len(t.split()) >= 3:
+            counted_comments += 1
+            if t[:1].isupper() and t.rstrip().endswith((".", "!", "?")):
+                sentence_comments += 1
+    comment_sentence_share = (round(sentence_comments / counted_comments, 2)
+                              if counted_comments >= 5 else None)
+    defs = len(re.findall(r"(?m)^[ \t]*(?:async[ \t]+)?def[ \t]+\w+",
+                          parts["code"])) if family == "hash" else 0
+    docstring_coverage = (round(len(parts["docstrings"]) / defs, 2)
+                          if defs >= 3 else None)
+
+    # More report-only diagnostics. Banners are a decades-old human habit
+    # (IDEs ship comment-divider extensions), formatters flatten everyone's
+    # line lengths, and generic naming is at least as junior-dev as it is
+    # AI - so none of these move the score.
+    banner_comments = sum(
+        1 for _, body in parts["comments"]
+        if re.match(r"^[=\-*~_#]{4,}(?:\s*[\w /&'-]{1,40}?\s*[=\-*~_#]{2,})?$",
+                    body.strip()))
+    lens = [len(ln) for ln in parts["code"].split("\n") if ln.strip()]
+    line_length_cv = None
+    if len(lens) >= 30:
+        mean = sum(lens) / len(lens)
+        sd = (sum((x - mean) ** 2 for x in lens) / len(lens)) ** 0.5
+        line_length_cv = round(sd / mean, 2) if mean else None
+    idents = re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", parts["code"])
+    generic_identifier_share = (
+        round(sum(1 for i in idents if i.lower() in _GENERIC_IDENTIFIERS) /
+              len(idents), 3) if len(idents) >= 40 else None)
+
+    words = len(re.findall(r"[^\W\d_](?:[^\W\d_]|['\-])+", prose_text))
+
+    buzz_total = sum(n for _, n, _ in buzz)
+    phr_total = sum(n for _, n, _ in phr)
+    cphr_total = sum(n for _, n, _ in cphr)
+    raw = (buzz_total * 3) + (phr_total * 3) + (cphr_total * 3)
+    raw += cpat_raw + typo_raw
+    if corroborated:
+        raw += cpat_raw_gated
+    raw += emoji_n * 2
+    raw += len(err_boiler) * 3
+    raw += max(0, len(success_boiler) - 1) * 2
+    raw += len(swallowed) * 2
+    raw += max(0, len(redundant) - 1) * 2
+    raw += max(0, len(echoes) - 1) * 1
+    if narration_scored:
+        raw += (len(narrated) - 3) * 2
+    raw += art_total * 10
+    # Per-100-lines normalization with a floored denominator: one weighted
+    # hit in a ten-line snippet is a data point, not a verdict. The floor of
+    # 40 keeps a single strong hit (weight 3) in a tiny file under the soft
+    # threshold - the short-snippet regime is where the literature says
+    # every detector is closest to a coin flip, so a lone finding there
+    # reads as a note, not an accusation.
+    score = round(raw * 100.0 / max(sloc, 40), 1)
+    if art_total:
+        score = max(score, 25.0)
+
+    verdict = "looks human-written"
+    if score >= 25:
+        verdict = "reads as AI-written code"
+    elif score >= 10:
+        verdict = "some AI tells - worth a look"
+
+    return {
+        "mode": "code", "code_language": code_language,
+        "lines": total_lines, "sloc": sloc,
+        "comment_lines": parts["comment_line_count"],
+        "comment_share": comment_share, "words": words,
+        "score_per_100": score, "verdict": verdict,
+        "language": pack_code, "language_source": lang_source,
+        "ai_artifacts": artifacts, "buzzwords": buzz, "phrases": phr,
+        "comment_phrases": cphr, "comment_patterns": cpat,
+        "typography": typography, "emoji": emoji_n,
+        "error_boilerplate": err_boiler,
+        "success_boilerplate": success_boiler,
+        "swallowed_errors": swallowed,
+        "narration_comments": [(ln, t) for ln, t in narrated[:8]],
+        "narration_comment_count": len(narrated),
+        "narration_scored": narration_scored,
+        "corroborated": corroborated,
+        "redundant_comments": [(ln, t) for ln, t in redundant],
+        "docstring_name_echoes": [(ln, t) for ln, t in echoes],
+        "invisible_chars": len(inv_lines),
+        "comment_sentence_share": comment_sentence_share,
+        "docstring_coverage": docstring_coverage,
+        "banner_comments": banner_comments,
+        "line_length_cv": line_length_cv,
+        "generic_identifier_share": generic_identifier_share,
+    }
+
+
+def report_code(r, quiet=False):
+    out = [f"lines: {r['lines']} ({r['sloc']} code, {r['comment_lines']} comment)   "
+           f"AI-tell score: {r['score_per_100']}/100 lines   -> {r['verdict']}"]
+    if quiet:
+        return "\n".join(out)
+    out.append(f"language: {r['code_language']}")
+    if r["ai_artifacts"]:
+        out.append("\nChat residue (direct paste evidence - scores the hard verdict on its own):")
+        for label, n, lines in r["ai_artifacts"]:
+            out.append(f"  {n:>2}x  {label} (lines {', '.join(map(str, lines))})")
+    if r["buzzwords"]:
+        out.append("\nLLM buzzwords in comments:")
+        for w, n, lines in r["buzzwords"]:
+            out.append(f"  {n:>2}x  {w:<18} (lines {', '.join(map(str, lines))})")
+    if r["phrases"]:
+        out.append("\nFiller phrases in comments:")
+        for p, n, lines in r["phrases"]:
+            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines))})')
+    if r["comment_phrases"]:
+        out.append("\nExplainer-voice comments (written for the requester, not the maintainer):")
+        for p, n, lines in r["comment_phrases"]:
+            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines))})')
+    if r["comment_patterns"]:
+        out.append("\nComment constructions:")
+        for label, n, weight, hint, lines, gated in r["comment_patterns"]:
+            tag = ("" if not gated or r["corroborated"]
+                   else "  [needs corroboration, not scored]")
+            out.append(f"  {n:>2}x  {label}{tag} (lines {', '.join(map(str, lines))})")
+            out.append(f"        -> {hint}")
+    if r["typography"]:
+        out.append("\nTypography (chat-render characters in comments):")
+        for label, n, weight, hint, lines in r["typography"]:
+            out.append(f"  {n:>2}x  {label} (lines {', '.join(map(str, lines))})")
+            out.append(f"        -> {hint}")
+    misc = []
+    if r["emoji"]:
+        misc.append(f"{r['emoji']} emoji in comments or strings - assistants decorate, programmers rarely do")
+    if r["error_boilerplate"]:
+        misc.append(f"{len(r['error_boilerplate'])} stock error message(s) "
+                    f"('An error occurred...') (lines {', '.join(map(str, r['error_boilerplate'][:5]))})")
+    if len(r["success_boilerplate"]) >= 2:
+        misc.append(f"{len(r['success_boilerplate'])} '...successfully' victory-lap message(s) "
+                    f"(lines {', '.join(map(str, r['success_boilerplate'][:5]))})")
+    if r["narration_scored"]:
+        lines = ", ".join(str(ln) for ln, _ in r["narration_comments"][:5])
+        misc.append(f"{r['narration_comment_count']} body comments open on a narration verb "
+                    f"(Create/Check/Iterate...) - the walkthrough voice (lines {lines})")
+    if r["swallowed_errors"]:
+        misc.append(f"{len(r['swallowed_errors'])} catch-and-print handler(s) that swallow the error "
+                    f"(lines {', '.join(map(str, r['swallowed_errors'][:5]))})")
+    if r["redundant_comments"]:
+        lines = ", ".join(str(ln) for ln, _ in r["redundant_comments"][:5])
+        misc.append(f"{len(r['redundant_comments'])} comment(s) that restate the code they sit on (lines {lines})")
+    if r["docstring_name_echoes"]:
+        lines = ", ".join(str(ln) for ln, _ in r["docstring_name_echoes"][:5])
+        misc.append(f"{len(r['docstring_name_echoes'])} docstring(s) that just restate the function name (lines {lines})")
+    if misc:
+        out.append("\nCode habits:")
+        for m in misc:
+            out.append(f"  - {m}")
+    diag = []
+    if r["comment_sentence_share"] is not None and r["comment_sentence_share"] >= 0.8:
+        diag.append(f"{int(r['comment_sentence_share'] * 100)}% of comments are full capitalized sentences "
+                    "[style, not scored - disciplined humans do this too]")
+    if r["docstring_coverage"] is not None and r["docstring_coverage"] >= 1.0:
+        diag.append("every function carries a docstring [style, not scored]")
+    if r["comment_share"] >= 0.4 and r["sloc"] >= 20:
+        diag.append(f"comments on {int(r['comment_share'] * 100)}% of content lines "
+                    "[style, not scored - tutorial code does this too]")
+    if r["banner_comments"] >= 3:
+        diag.append(f"{r['banner_comments']} banner/divider comments "
+                    "[style, not scored - a decades-old human habit too]")
+    if r["line_length_cv"] is not None and r["line_length_cv"] < 0.35:
+        diag.append(f"code line lengths unusually even (cv={r['line_length_cv']}) "
+                    "[not scored - auto-formatters do this to everyone]")
+    if r["generic_identifier_share"] is not None and r["generic_identifier_share"] >= 0.12:
+        diag.append(f"{int(r['generic_identifier_share'] * 100)}% of identifiers are generic "
+                    "(result/data/temp/item...) [style, not scored]")
+    if diag:
+        out.append("\nDiagnostics:")
+        for d in diag:
+            out.append(f"  - {d}")
+    if not (r["ai_artifacts"] or r["buzzwords"] or r["phrases"] or
+            r["comment_phrases"] or r["comment_patterns"] or r["typography"] or misc):
+        out.append("\nNothing flagged. Reads human-written.")
+    return "\n".join(out)
+
+
+def to_rdjsonl_code(path, r):
+    """rdjsonl lines for a code-mode result, same shape as to_rdjsonl."""
+    src = path if path != "-" else "<stdin>"
+    lines = []
+
+    def emit(message, line, severity):
+        lines.append(json.dumps({
+            "message": message,
+            "location": {"path": src, "range": {"start": {"line": max(line, 1)}}},
+            "severity": severity,
+        }))
+
+    for label, n, ls in r["ai_artifacts"]:
+        for ln in ls:
+            emit(f"{label} - direct paste evidence", ln, "ERROR")
+    for word, n, ls in r["buzzwords"]:
+        for ln in ls:
+            emit(f'buzzword in a comment: "{word}"', ln, "WARNING")
+    for phrase, n, ls in r["phrases"]:
+        for ln in ls:
+            emit(f'filler phrase in a comment: "{phrase}"', ln, "WARNING")
+    for phrase, n, ls in r["comment_phrases"]:
+        for ln in ls:
+            emit(f'explainer-voice comment: "{phrase}"', ln, "WARNING")
+    for label, n, weight, hint, ls, gated in r["comment_patterns"]:
+        severity = "WARNING" if (not gated or r["corroborated"]) else "INFO"
+        for ln in ls:
+            emit(f"{label} - {hint}", ln, severity)
+    for label, n, weight, hint, ls in r["typography"]:
+        for ln in ls:
+            emit(f"{label} - {hint}", ln, "WARNING")
+    for ln in r["error_boilerplate"]:
+        emit("stock error message ('An error occurred...')", ln, "WARNING")
+    for ln in r["swallowed_errors"]:
+        emit("catch-and-print handler that swallows the error", ln, "WARNING")
+    for ln, t in r["redundant_comments"]:
+        emit(f'comment restates the code: "{t}"', ln, "WARNING")
+    for ln, t in r["docstring_name_echoes"]:
+        emit(f'docstring restates the function name: "{t}"', ln, "INFO")
+    return lines
+
+
 def main(argv=None):
     # Windows consoles default to a legacy code page, and the language packs'
     # names, labels, and hints are not all cp1252-encodable. Emit UTF-8 and
@@ -2108,6 +3137,12 @@ def main(argv=None):
     ap.add_argument("--quiet", action="store_true", help="verdict line only")
     ap.add_argument("--markdown", action="store_true",
                     help="skip fenced/inline code when scoring (automatic for .md files)")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--code", action="store_true",
+                      help="score as source code (automatic for known code "
+                           "extensions; use this for stdin or odd extensions)")
+    mode.add_argument("--prose", action="store_true",
+                      help="score as prose even if the extension says code")
     ap.add_argument("--threshold", type=float, default=10.0,
                     help="score at/above which exit code is 1 (default 10)")
     ap.add_argument("--lang", default="auto", choices=["auto"] + sorted(LANGUAGES),
@@ -2168,26 +3203,38 @@ def main(argv=None):
 
     results = []
     for p in paths:
+        # Mode is decided per file, so `noslop README.md src/*.py` scores
+        # the README as prose and the sources as code in one run.
+        ext = os.path.splitext(p)[1].lower() if p != "-" else ""
+        code_mode = args.code or (not args.prose and ext in CODE_EXTENSIONS)
         try:
-            text = load_text(p, force_markdown=args.markdown)
+            text = load_text(p, force_markdown=args.markdown and not code_mode)
         except OSError as exc:
             print(f"noslop: {p}: {exc.strerror or exc}", file=sys.stderr)
             return 2
-        # Language is resolved per input, not per run - a docs sweep can mix
-        # English and translated files, and the config's ignore/extra lists
-        # apply to whichever pack each file lands on.
-        code, source = resolve_language(text, args.lang)
-        pack = LANGUAGES[code]
-        bw, ph = ((None, None) if config is None else
-                  apply_config(config, pack["buzzwords"], pack["phrases"]))
-        r = analyze(text, buzzwords=bw, phrases=ph, lang=code, lang_source=source)
+        if code_mode:
+            r = analyze_code(text, ext=ext or None, config=config,
+                             lang=args.lang)
+        else:
+            # Language is resolved per input, not per run - a docs sweep can
+            # mix English and translated files, and the config's ignore/extra
+            # lists apply to whichever pack each file lands on.
+            code, source = resolve_language(text, args.lang)
+            pack = LANGUAGES[code]
+            bw, ph = ((None, None) if config is None else
+                      apply_config(config, pack["buzzwords"], pack["phrases"]))
+            r = analyze(text, buzzwords=bw, phrases=ph, lang=code, lang_source=source)
         if p != "-":
             r["path"] = p
         results.append((p, r))
 
+    def final_score(r):
+        return r["score_per_100"] if r["mode"] == "code" else r["score_per_1k"]
+
     if args.rdjson:
         for p, r in results:
-            for line in to_rdjsonl(p, r):
+            emitter = to_rdjsonl_code if r["mode"] == "code" else to_rdjsonl
+            for line in emitter(p, r):
                 print(line)
     elif args.json:
         payload = results[0][1] if len(results) == 1 else [r for _, r in results]
@@ -2196,7 +3243,8 @@ def main(argv=None):
         multi = len(results) > 1
         blocks = []
         for p, r in results:
-            body = report(r, quiet=args.quiet)
+            body = (report_code(r, quiet=args.quiet) if r["mode"] == "code"
+                    else report(r, quiet=args.quiet))
             if multi and args.quiet:
                 blocks.append(f"{p}: {body}")
             elif multi:
@@ -2204,7 +3252,7 @@ def main(argv=None):
             else:
                 blocks.append(body)
         print("\n".join(blocks) if (multi and args.quiet) else "\n\n".join(blocks))
-    return 0 if all(r["score_per_1k"] < args.threshold for _, r in results) else 1
+    return 0 if all(final_score(r) < args.threshold for _, r in results) else 1
 
 
 if __name__ == "__main__":

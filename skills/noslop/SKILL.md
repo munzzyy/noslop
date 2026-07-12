@@ -1,6 +1,6 @@
 ---
 name: noslop
-description: Flag AI-sounding prose (buzzwords, filler phrases, the not-just-X-but-Y frame, em-dash spray, flat sentence rhythm) before it ships. Use before finalizing any writing a user will publish or send - PR descriptions, commit messages, issue comments, READMEs, docs, blog posts, emails - to check whether it reads like a person wrote it or like a bot did.
+description: Flag AI-sounding prose (buzzwords, filler phrases, the not-just-X-but-Y frame, em-dash spray, flat sentence rhythm) before it ships, and AI-looking code (narrated comments, chat residue, stock error handling) in source files. Use before finalizing any writing a user will publish or send - PR descriptions, commit messages, issue comments, READMEs, docs, emails - and to check whether a source file reads AI-written.
 ---
 
 # noslop
@@ -17,7 +17,12 @@ Before finalizing:
 - a blog post or newsletter draft
 - an email you're drafting on someone's behalf
 
-Skip it for code, terminal output, and anything that isn't meant to read as prose.
+Source code gets its own mode instead of being skipped: pass a file with a code
+extension (or `--code` on stdin) and noslop scores the *code* for AI tells -
+narrated step comments, explainer voice, chat residue, stock error handling -
+with line numbers. Use that before shipping code a user asked you to review for
+AI authorship, or to check that code you edited doesn't read machine-written.
+Skip prose mode for terminal output and anything that isn't meant to read as prose.
 
 ## How to run it
 
@@ -56,6 +61,19 @@ The important field is `score_per_1k`, a weighted count of AI tells per 1,000 wo
 exactly which lines to fix and why: overused LLM vocabulary, boilerplate phrases, the
 `not just X, but Y` contrast frame, em-dash overuse, emoji in prose, repeated bold-label
 bullet lists, and suspiciously uniform sentence lengths.
+
+## Reading a code-mode result
+
+Code results carry `"mode": "code"` and score per 100 code lines in
+`score_per_100`, same verdict bands (under 10 clean, 10-25 worth a look, 25+
+reads AI-written). The finding keys tell you why: `ai_artifacts` is direct chat
+residue (a paste fence, a tool trailer, a truncation marker - one hit already
+pins the hard verdict), `comment_phrases` and `narration_comments` are the
+explainer voice, `redundant_comments` restate the code they sit on, and
+`error_boilerplate`/`swallowed_errors` are the stock catch-and-print shape.
+Two things a clean score does not mean: that a human wrote it (terse agent
+output scores clean by design), and two things that never score: comment
+density and docstring coverage, which are reported as diagnostics only.
 
 ## The rule
 

@@ -16,6 +16,15 @@ A labeled corpus and a scorer that measure noslop against ground truth, so
   (added in 0.9.0 to guard the new Russian buzzword/density checks against
   flagging real formal Russian). All public domain or permissively
   licensed, sourced and dated in `SOURCES.md`.
+- `corpus/code-ai/` and `corpus/code-human/` - the same idea for code mode,
+  added in 0.10.0. The AI half is unedited assistant-style output across
+  nine languages, including one deliberately terse agentic-style sample the
+  engine is expected to miss (see `code-ai/MANIFEST.md` for the honesty
+  notes). The human half is verbatim excerpts of pre-2021 open source
+  pinned to old tags - CPython, jQuery, Redis, lodash, TensorFlow, Vue and
+  friends - picked adversarially: tutorial comments, JSDoc on trivial
+  functions, imperative body comments, Google-style docstrings, non-native
+  English. Sources and licenses in `code-human/SOURCES.md`.
 
 Small on purpose. This is a calibration set for a heuristic linter, not a
 benchmark for publishing claims - 36 samples is enough to catch "this change
@@ -105,3 +114,59 @@ default settings. Text from other models, other decades, or prompted to
 "sound human" will score differently. These numbers say the tells fire on
 unedited assistant prose and stay quiet on human writing - not that noslop
 is an AI detector. It isn't; it's a linter.
+
+## Measured state, code mode (v0.10.0)
+
+29 samples: 14 AI, 15 human. Same scorer, same floor mechanism
+(`FLOORS_CODE` in `run_eval.py`), scores per 100 code lines instead of per
+1,000 words.
+
+| metric | v0.10.0 engine |
+|---|---|
+| AUC | 0.9643 |
+| detection @10 ("worth a look") | 92.9% |
+| detection @25 ("reads as AI-written") | 85.7% |
+| human FP @10 | 0% |
+| human FP @25 | 0% |
+
+Every human sample scores exactly 0.0, and that's with the corpus stacked
+against the engine on purpose: 2012-era jQuery narrates its code in
+imperative comments, lodash puts full JSDoc on three-line functions, kilo.c
+teaches as it goes, TensorFlow writes Google-style Args:/Returns: blocks,
+and Vue's comments are non-native English. Each of those is the false-
+positive trap for one of the scored checks, and the two that tripped during
+development (jQuery on comment narration, an early version of the
+truncation rule on the phrase "rest of the file") got the rule redesigned,
+not the sample swapped: narration now needs corroboration from another
+finding class before it scores, and truncation markers need real elision
+context.
+
+The one AI sample under 10 is the terse agentic-style hard case
+(`13-agentic-terse-cache.py`, scoring 0.0), kept because the research this
+mode was built on is unambiguous that surface tells can't reliably catch a
+well-configured coding agent's output - the detection floor is set at 80%
+with that miss included rather than pretending the register doesn't exist.
+The same literature puts hybrid human-edited AI code near a 33% recall
+ceiling for every detector class, ML included, so a clean code-mode score
+means "none of these tells", never "a human wrote this".
+
+The circularity caveat, stated plainly: the AI half of the code corpus was
+written by an LLM asked to answer typical requests naturally, and the rules
+were derived from external research (papers, maintainer reports, tool
+docs - cited in the repo's research notes), not from the corpus. But a
+generator and a judge from the same model family will always share some
+blind spots, so treat these numbers as calibration against unedited chat
+output, not as a benchmark claim.
+
+Beyond the corpus, the engine was swept against 591 CPython 3.14 stdlib
+files (>= 20 code lines each) as a live false-positive hunt. Result: 2
+files over the soft threshold (0.34%), zero over the hard verdict. The
+sweep drove three rule changes before release - "Step N" spec-reference
+comments joined the corroboration gate (idna.py numbers its comments from
+RFC 3490), comments that are themselves code became exempt from the
+redundancy check (_ios_support.py mirrors ctypes calls with their
+Objective-C equivalents), and "underscore" left the code-mode buzzword list
+(in a comment it's the character, not the verb). Of the two files still
+over 10, one is 2025-era code with typographic arrows and ellipsis
+characters in its comments - which reads less like a false positive and
+more like the sweep working.

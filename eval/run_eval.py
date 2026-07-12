@@ -21,7 +21,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from noslop import analyze, strip_markdown_code  # noqa: E402
+from noslop import analyze, analyze_code, strip_markdown_code  # noqa: E402
 
 CORPUS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "corpus")
 
@@ -38,6 +38,18 @@ FLOORS = {
     "human_fp_at_25_max": 0.0,  # no human sample may cross the hard verdict
 }
 
+# Code-mode floors, same contract as FLOORS but over code-ai/code-human.
+# detect floor sits lower than prose on purpose: the corpus includes a
+# terse agentic-style sample the literature says surface tells can't
+# reliably catch (see eval/README.md), and pretending otherwise would just
+# mean gaming the corpus.
+FLOORS_CODE = {
+    "auc_min": 0.95,
+    "detect_at_10_min": 0.80,
+    "human_fp_at_10_max": 0.10,
+    "human_fp_at_25_max": 0.0,
+}
+
 
 def load_samples(kind):
     root = os.path.join(CORPUS, kind)
@@ -51,6 +63,22 @@ def load_samples(kind):
         r = analyze(strip_markdown_code(text))
         rows.append({"file": name, "score": r["score_per_1k"], "words": r["words"],
                      "language": r["language"]})
+    return rows
+
+
+def load_code_samples(kind):
+    root = os.path.join(CORPUS, kind)
+    rows = []
+    for name in sorted(os.listdir(root)):
+        if name.endswith(".md"):
+            continue
+        path = os.path.join(root, name)
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        ext = os.path.splitext(name)[1]
+        r = analyze_code(text, ext=ext)
+        rows.append({"file": name, "score": r["score_per_100"],
+                     "sloc": r["sloc"], "language": r["code_language"]})
     return rows
 
 
@@ -71,18 +99,9 @@ def rate(scores, threshold):
     return sum(1 for s in scores if s >= threshold) / len(scores)
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--json", action="store_true")
-    ap.add_argument("--check", action="store_true",
-                    help="exit non-zero if a CI floor is broken")
-    args = ap.parse_args(argv)
-
-    ai = load_samples("ai")
-    human = load_samples("human")
+def summarize(ai, human, floors):
     ai_s = [r["score"] for r in ai]
     hu_s = [r["score"] for r in human]
-
     summary = {
         "ai_samples": len(ai), "human_samples": len(human),
         "auc": round(auc(ai_s, hu_s), 4),
@@ -95,41 +114,69 @@ def main(argv=None):
         "human_fp_at_10": round(rate(hu_s, 10), 4),
         "human_fp_at_25": round(rate(hu_s, 25), 4),
     }
-
     failures = []
-    if summary["auc"] < FLOORS["auc_min"]:
-        failures.append("AUC %.4f under floor %.2f" % (summary["auc"], FLOORS["auc_min"]))
-    if summary["detect_at_10"] < FLOORS["detect_at_10_min"]:
+    if summary["auc"] < floors["auc_min"]:
+        failures.append("AUC %.4f under floor %.2f" % (summary["auc"], floors["auc_min"]))
+    if summary["detect_at_10"] < floors["detect_at_10_min"]:
         failures.append("detection@10 %.2f under floor %.2f"
-                        % (summary["detect_at_10"], FLOORS["detect_at_10_min"]))
-    if summary["human_fp_at_10"] > FLOORS["human_fp_at_10_max"]:
+                        % (summary["detect_at_10"], floors["detect_at_10_min"]))
+    if summary["human_fp_at_10"] > floors["human_fp_at_10_max"]:
         failures.append("human FP@10 %.2f over ceiling %.2f"
-                        % (summary["human_fp_at_10"], FLOORS["human_fp_at_10_max"]))
-    if summary["human_fp_at_25"] > FLOORS["human_fp_at_25_max"]:
+                        % (summary["human_fp_at_10"], floors["human_fp_at_10_max"]))
+    if summary["human_fp_at_25"] > floors["human_fp_at_25_max"]:
         failures.append("human FP@25 %.2f over ceiling %.2f"
-                        % (summary["human_fp_at_25"], FLOORS["human_fp_at_25_max"]))
+                        % (summary["human_fp_at_25"], floors["human_fp_at_25_max"]))
     summary["floor_failures"] = failures
+    return summary
+
+
+def print_block(title, ai, human, summary, size_key, size_unit):
+    print("%s - %d AI / %d human samples" % (title, len(ai), len(human)))
+    print()
+    for label, rows in (("AI", ai), ("HUMAN", human)):
+        print("%s samples:" % label)
+        for r in sorted(rows, key=lambda x: -x["score"]):
+            print("  %6.1f  %-36s (%d %s, %s)"
+                  % (r["score"], r["file"], r[size_key], size_unit, r["language"]))
+        print()
+    print("AUC (AI ranked above human): %.4f" % summary["auc"])
+    print("AI    mean %.1f  median %.1f" % (summary["ai_mean"], summary["ai_median"]))
+    print("human mean %.1f  max %.1f" % (summary["human_mean"], summary["human_max"]))
+    print("detection  @10: %5.1f%%   @25: %5.1f%%"
+          % (summary["detect_at_10"] * 100, summary["detect_at_25"] * 100))
+    print("human FPs  @10: %5.1f%%   @25: %5.1f%%"
+          % (summary["human_fp_at_10"] * 100, summary["human_fp_at_25"] * 100))
+    for f in summary["floor_failures"]:
+        print("FLOOR BROKEN: " + f)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--check", action="store_true",
+                    help="exit non-zero if a CI floor is broken")
+    args = ap.parse_args(argv)
+
+    ai = load_samples("ai")
+    human = load_samples("human")
+    summary = summarize(ai, human, FLOORS)
+
+    code_ai = load_code_samples("code-ai")
+    code_human = load_code_samples("code-human")
+    code_summary = summarize(code_ai, code_human, FLOORS_CODE)
+
+    failures = summary["floor_failures"] + code_summary["floor_failures"]
 
     if args.json:
-        print(json.dumps({"summary": summary, "ai": ai, "human": human}, indent=2))
+        print(json.dumps({"summary": summary, "ai": ai, "human": human,
+                          "code_summary": code_summary,
+                          "code_ai": code_ai, "code_human": code_human},
+                         indent=2))
     else:
-        print("noslop eval - %d AI / %d human samples" % (len(ai), len(human)))
+        print_block("noslop eval (prose)", ai, human, summary, "words", "words")
         print()
-        for label, rows in (("AI", ai), ("HUMAN", human)):
-            print("%s samples:" % label)
-            for r in sorted(rows, key=lambda x: -x["score"]):
-                print("  %6.1f  %-36s (%d words, %s)"
-                      % (r["score"], r["file"], r["words"], r["language"]))
-            print()
-        print("AUC (AI ranked above human): %.4f" % summary["auc"])
-        print("AI    mean %.1f  median %.1f" % (summary["ai_mean"], summary["ai_median"]))
-        print("human mean %.1f  max %.1f" % (summary["human_mean"], summary["human_max"]))
-        print("detection  @10: %5.1f%%   @25: %5.1f%%"
-              % (summary["detect_at_10"] * 100, summary["detect_at_25"] * 100))
-        print("human FPs  @10: %5.1f%%   @25: %5.1f%%"
-              % (summary["human_fp_at_10"] * 100, summary["human_fp_at_25"] * 100))
-        for f in failures:
-            print("FLOOR BROKEN: " + f)
+        print_block("noslop eval (code)", code_ai, code_human, code_summary,
+                    "sloc", "sloc")
 
     if args.check and failures:
         return 1

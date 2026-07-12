@@ -33,6 +33,10 @@ jobs:
         with:
           python-version: "3.11"
       - run: python noslop.py --no-config README.md
+      # Same deal for code mode: the engine and its JS port have to pass
+      # their own code-mode scan (quoted mentions in comments are excused,
+      # string literals are data - see the mention-vs-use note in noslop.py).
+      - run: python noslop.py --no-config noslop.py web/detector.js
 
   # Detection quality, measured against the labeled corpus in eval/. Fails
   # if AUC, recall at the "worth a pass" threshold, or the false-positive

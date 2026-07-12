@@ -5,6 +5,32 @@ bump gets them. Versions before this file existed are reconstructed from the tag
 
 ## Unreleased
 
+- **Code mode.** `noslop file.py` now asks whether the *code* reads AI-written,
+  with the same contract as prose mode: deterministic, local, every point a
+  line-numbered finding. A string-aware scanner splits source into comments,
+  docstrings, strings, and code across ~60 extensions (ten comment-syntax
+  families, shell heredocs included - a heredoc body is payload, not
+  comments), then scores chat residue (tool trailers, share links, pasted
+  fences, truncation markers - artifact tier), explainer-voice comments,
+  narrated walkthroughs (corroboration-gated), comments that restate the code,
+  docstrings that restate the function name, stock error/success messages,
+  swallowed exception handlers, chat-render typography, emoji, and invisible
+  Unicode. The 16-language prose lists run over comment text. Comment density,
+  banners, docstring coverage, line-length uniformity, and generic naming are
+  report-only diagnostics, on purpose. New flags: `--code`, `--prose`; `--json`
+  results carry `mode` in both modes; `--rdjson` emits code findings too.
+- A labeled code corpus (14 AI samples across nine languages, one of them a
+  deliberately-missed terse agentic case, plus 15 adversarially picked
+  pre-2021 human excerpts) with CI floors: AUC 0.9643, detection 92.9% at the
+  soft threshold and 85.7% at the hard one, zero human false positives. See
+  `eval/README.md` for methods, numbers, and the honest limits.
+- noslop.py and web/detector.js score 0.0/100 in code mode on themselves, held
+  there by the test suite (mention-vs-use: quoted tells in comments are
+  excused, string literals are data).
+- Prose mode gains the coding-tool signature artifacts: `Co-Authored-By:`
+  trailers from Claude Code/Cursor/Devin, the Claude Code PR footer, and AI
+  chat share links (claude.ai, ChatGPT, Gemini) - all artifact tier, in the
+  web app too.
 - The README's pre-commit and Action examples pin the current release again (they
   sat at v0.6.0 through three releases), and the plugin manifest reports 0.9.0
   instead of 0.4.0. Two new tests lock every pinned version to `__version__`, so a

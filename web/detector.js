@@ -125,6 +125,18 @@
     ["chatbot citation residue (grok_card)", "grok_card"],
     ["chatgpt.com link-tracking parameter", "utm_source=chatgpt.com"],
     ["openai link-tracking parameter", "utm_source=openai"],
+    // Coding-tool signatures - literal strings the tools write into commit
+    // messages and PR bodies by default. Presence is proof; absence proves
+    // nothing. The Claude trailer matches on the noreply address so a human
+    // co-author actually named Claude doesn't trip it.
+    ["Claude Code commit trailer", "noreply@anthropic.com"],
+    ["Claude Code PR footer", "generated with [claude code]"],
+    ["Cursor agent commit trailer", "cursoragent@cursor.com"],
+    ["Devin commit trailer", "devin-ai-integration"],
+    ["AI chat share link", "claude.ai/share"],
+    ["AI chat share link", "chatgpt.com/share"],
+    ["AI chat share link", "chat.openai.com/share"],
+    ["AI chat share link", "gemini.google.com/share"],
   ];
 
   // Chatbot disclaimer sentences - same floor-at-25 tier as AI_ARTIFACTS,
@@ -1620,6 +1632,7 @@
     else if (score >= 10) verdict = "some AI tells - worth a pass";
 
     return {
+      mode: "prose",
       words: wc,
       score_per_1k: score,
       verdict: verdict,
