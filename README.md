@@ -357,7 +357,7 @@ Editing `noslop.py` directly to change the word lists works, but it doesn't surv
 }
 ```
 
-`ignore_words` / `ignore_phrases` remove entries from the built-in lists, `extra_words` / `extra_phrases` add your own on top. `extra_patterns` adds custom regexes alongside the built-in constructions (the "not just X but Y" frame, hedge stacks, and the rest): each entry needs a `regex`, plus an optional `label`, `weight` (default 1), and `hint`. A regex that doesn't compile is reported as `noslop: <path>: ...`, not a traceback. All keys are optional. Use `--config PATH` to point at a specific file instead of relying on the directory walk, or `--no-config` to ignore any config file for one run.
+`ignore_words` / `ignore_phrases` remove entries from the built-in lists, `extra_words` / `extra_phrases` add your own on top. `extra_patterns` adds custom regexes alongside the built-in constructions (the `not just X, but Y` frame, hedge stacks, and the rest): each entry needs a `regex`, plus an optional `label`, `weight` (default 1), and `hint`. A regex that doesn't compile is reported as `noslop: <path>: ...`, not a traceback. All keys are optional. Use `--config PATH` to point at a specific file instead of relying on the directory walk, or `--no-config` to ignore any config file for one run.
 
 ## Hooks
 
