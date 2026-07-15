@@ -10,6 +10,14 @@
 ![16 languages](https://img.shields.io/badge/languages-16-blue)
 [![try it in your browser](https://img.shields.io/badge/try%20it-in%20your%20browser-orange)](https://munzzyy.github.io/noslop/)
 
+**Install:** `pipx install noslop-lint` - more ways to install (pip, or skip installing
+entirely) are in [Install](#install) below.
+
+**Watch the name: the PyPI package is `noslop-lint`, not `noslop`.** A package literally
+named `noslop` on PyPI or npm is a different, unrelated project - an LLM-based rewriter
+and an old code-quality tool. `pipx install noslop-lint` is the right one, and it still
+runs as the `noslop` command either way.
+
 Every other AI-writing detector on the market runs a machine-learning model on someone
 else's server: you upload a draft, wait, and get back a percentage with no way to check
 its work. noslop runs no model at all. It's word lists, regex, and rhythm math, all in
@@ -19,13 +27,38 @@ behind it to retrain.
 
 > **The proof is the product: this README scores 0.0/1k on noslop itself, noslop.py scores 0.0/100 in its own code mode, and CI fails the build the day either stops being true.**
 
-Four ways to run it: paste into the [browser app](https://munzzyy.github.io/noslop/), drop the CLI into a pre-commit hook or CI, wire it into [reviewdog](#hooks) for inline PR comments, or install it as a skill so your AI coding agent checks its own prose before handing it back to you.
+```
+$ noslop pr.txt
+words: 41   AI-tell score: 658.5/1k   -> reads as AI - needs a real rewrite
 
-**[Try it in your browser](https://munzzyy.github.io/noslop/).** Paste a draft and watch the tells light up. It all runs client-side, so nothing you paste is uploaded, stored, or sent anywhere.
+LLM buzzwords:
+   1x  delves             (lines 1)
+   1x  seamlessly         (lines 1)
+   1x  streamline         (lines 1)
+   1x  robust             (lines 2)
+   1x  comprehensive      (lines 3)
+
+Filler phrases:
+   1x  "it's important to note" (lines 2)
+   1x  "not just a" (lines 2)
+   1x  "i hope this helps" (lines 3)
+
+Constructions:
+   1x  'not just X but Y' construction (lines 2)
+        -> state it plainly instead of the contrast frame
+$ echo $?
+1
+```
+
+That's real output, not a mockup. Drop it into a pre-commit hook or CI and it exits
+nonzero the moment something reads AI.
+
+- **CLI** - `noslop draft.md`, a pre-commit hook, CI, or piped into [reviewdog](#hooks) for inline PR comments
+- **Code mode** - point it at a `.py`/`.js`/`.go`/`.rs` file instead of prose and it scores the comments and docstrings for AI tells, leaving the code logic alone - see [Code mode](#code-mode-was-this-code-written-by-an-ai)
+- **Agent skill** - install it so your coding agent checks its own prose before handing a PR description or commit message back to you - see [As an agent skill](#as-an-agent-skill)
+- **Also runs in your browser** - [munzzyy.github.io/noslop](https://munzzyy.github.io/noslop/), paste and go, nothing uploaded, same scoring engine as the CLI
 
 [![noslop analyzing a slop-heavy paragraph, every AI tell underlined in place](docs/media/app-dark.png)](https://munzzyy.github.io/noslop/)
-
-Prefer the terminal? It's also one Python file with no dependencies that drops into a pre-commit hook or CI. Same scoring engine either way, and either way it runs locally and deterministically with no network access.
 
 ## Why this and not a detector
 
