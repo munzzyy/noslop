@@ -484,3 +484,7 @@ Bug reports, false positives, and new buzzwords/phrases are all welcome. See [CO
 ## License
 
 [Prosperity Public License 3.0.0](LICENSE). Free for noncommercial use: personal projects, hobby work, research, education, nonprofits, and government all qualify. Commercial use gets a thirty-day trial, and past that it needs a paid license. To sort one out, open an issue or email Munzzyy5@proton.me.
+
+## Support
+
+If noslop keeps the slop out of your writing, [sponsoring](https://github.com/sponsors/munzzyy) is what keeps the tell lists growing.
