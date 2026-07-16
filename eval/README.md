@@ -73,6 +73,15 @@ tells, and "worth a pass" is the soft verdict on purpose - no human sample
 reaches the hard one on any engine, including the new Russian statute
 excerpt added this pass (0.0 - see below).
 
+**Fixed since:** "landscape" turned out to earn its keep nowhere in the AI
+half of this corpus - zero samples relied on it - while it flagged both
+Thoreau and `06-fiction-wharton.txt` ("the white landscape") for writing
+about actual land. It moved from a bare buzzword to the qualified frames
+that are the real tell (`digital landscape`, `business landscape`,
+`competitive landscape`, `regulatory landscape`, `technological landscape`,
+`ever-evolving landscape` - see the note in noslop.py's `BUZZWORDS`).
+Detection is unchanged; AUC moved to 0.9969 and human FP@10 to 0%.
+
 ### What's new in 0.9.0
 
 Ten new detectors (chatbot disclaimer phrases at the artifact floor,

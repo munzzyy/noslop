@@ -493,9 +493,9 @@ If you're already running [Vale](https://vale.sh), [vale-ai-tells](https://githu
 `eval/` holds a labeled corpus - 19 samples of unedited LLM output across genres, 17 samples
 of human writing from essays to old cookbooks to a 2016 Rails README to a Russian statute
 excerpt - and a scorer that reports detection rate, false-positive rate, and AUC against it.
-The current engine scores an AUC of **0.9752**, catches **89.5% of AI samples** at the
-"worth a pass" threshold, and flags **one human sample** out of 17 (Thoreau, who writes
-about literal landscapes with heavy em dashes - the receipts are in
+The current engine scores an AUC of **0.9969**, catches **89.5% of AI samples** at the
+"worth a pass" threshold, and flags **zero human samples** out of 17 at that threshold
+(the receipts, including the one that used to slip through, are in
 [eval/README.md](eval/README.md)). CI runs the eval with floors, so a change that trades
 false positives for recall fails the build instead of shipping quietly.
 

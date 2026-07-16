@@ -65,7 +65,7 @@ JSON_SCHEMA_KEYS = {
 # Words that show up far more in LLM prose than in how people actually write.
 BUZZWORDS = [
     "delve", "delved", "delves", "delving", "tapestry", "testament", "realm", "realms",
-    "landscape", "navigate", "navigating", "robust", "seamless", "seamlessly",
+    "navigate", "navigating", "robust", "seamless", "seamlessly",
     "leverage", "leveraging", "leverages", "underscore", "underscores",
     "underscoring", "pivotal", "crucial", "comprehensive", "intricate",
     "intricacies", "myriad", "plethora", "foster", "fostering", "elevate",
@@ -94,6 +94,13 @@ BUZZWORDS = [
     "solidify", "solidifies", "solidifying", "diverse array", "focal point",
     "indelible mark", "deeply rooted",
     "enduring legacy", "lasting legacy",
+    # Bare "landscape" used to be on this list and flagged Thoreau and Wharton
+    # (real landscapes, not metaphor) in the human eval corpus while catching
+    # zero AI samples in the same corpus - the AI cliche is always a
+    # qualified abstract domain, never the word alone, so it moved here as
+    # the specific frames that are actually the tell.
+    "digital landscape", "business landscape", "competitive landscape",
+    "regulatory landscape", "technological landscape", "ever-evolving landscape",
 ]
 
 # Whole-phrase tics. Matched case-insensitively as substrings.

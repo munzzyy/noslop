@@ -23,7 +23,7 @@
 
   const BUZZWORDS = [
     "delve", "delved", "delves", "delving", "tapestry", "testament", "realm", "realms",
-    "landscape", "navigate", "navigating", "robust", "seamless", "seamlessly",
+    "navigate", "navigating", "robust", "seamless", "seamlessly",
     "leverage", "leveraging", "leverages", "underscore", "underscores",
     "underscoring", "pivotal", "crucial", "comprehensive", "intricate",
     "intricacies", "myriad", "plethora", "foster", "fostering", "elevate",
@@ -43,6 +43,9 @@
     "solidify", "solidifies", "solidifying", "diverse array", "focal point",
     "indelible mark", "deeply rooted",
     "enduring legacy", "lasting legacy",
+    // Bare "landscape" moved out - see the note in noslop.py's BUZZWORDS.
+    "digital landscape", "business landscape", "competitive landscape",
+    "regulatory landscape", "technological landscape", "ever-evolving landscape",
   ];
 
   const PHRASES = [
