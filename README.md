@@ -396,7 +396,37 @@ For inline PR review comments instead of a plain CI log, pipe `--rdjson` output 
 python noslop.py --rdjson docs/*.md | reviewdog -f=rdjsonl -name=noslop -reporter=github-pr-review
 ```
 
-`--rdjson` prints one JSON object per finding (message, file, line, severity) instead of the normal report, and pairs with `--exclude`/`.noslopignore` the same way `--json` does.
+`--rdjson` prints one JSON object per finding (message, file, line, severity) instead of the normal report, and pairs with `--exclude`/`.noslopignore` the same way `--json` does. Every occurrence gets its own line, not just the first handful - a construction hit 30 times in a file gets 30 diagnostics, so a linter or PR review tool downstream sees the whole picture.
+
+## Editor integration
+
+VS Code and most other editors still don't have a plugin - see [issue #5](https://github.com/munzzyy/noslop/issues/5) if you want to build one; `--json`/`--rdjson` are the stable contract to build against. Vim and Neovim do, through a real [ALE](https://github.com/dense-analysis/ale) linter that ships in this repo.
+
+`editors/ale/` adds `noslop` as an ALE linter for Markdown and plain text. Point your plugin manager at the subdirectory instead of the repo root:
+
+```vim
+" vim-plug
+Plug 'munzzyy/noslop', { 'rtp': 'editors/ale' }
+```
+
+```lua
+-- packer.nvim
+use({ 'munzzyy/noslop', rtp = 'editors/ale' })
+```
+
+or symlink it into a native Vim 8 package:
+
+```bash
+ln -s /path/to/noslop/editors/ale ~/.vim/pack/plugins/start/noslop-ale
+```
+
+Open a `.md` file and it just works: ALE runs `noslop --rdjson` on save and drops every finding into your location list. Plain text needs one extra line, because ALE runs zero linters on the generic `text` filetype until you say otherwise - true of every ALE text linter, not particular to this one:
+
+```vim
+let g:ale_linters = {'text': ['noslop']}
+```
+
+`noslop` just has to be on `$PATH`. From there it behaves exactly like the CLI - `.noslop.json`, `.noslopignore`, and a `--lang` override through `g:markdown_noslop_options` all carry through.
 
 ## What it checks
 

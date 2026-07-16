@@ -1200,6 +1200,12 @@
     return n;
   }
 
+  // Every finding category keeps at most this many example line numbers -
+  // mirrors MAX_HIT_LOCATIONS in noslop.py. The count reported alongside a
+  // row is always the true total; this only bounds how many locations ride
+  // along with it, so a pathological input can't blow up the result size.
+  const MAX_HIT_LOCATIONS = 200;
+
   // Python round(x, nd): round-half-to-even on the exact double, so the
   // per-1k score lands on the CLI's value. Scaling by 10^nd first would
   // destroy the above/below-tie information (0.1499999999999999944 * 10
@@ -1360,7 +1366,7 @@
       }
       const rows = [];
       for (const [key, starts] of counts) {
-        rows.push([key, starts.length, starts.slice(0, 5).map((s) => lineOf(text, s))]);
+        rows.push([key, starts.length, starts.slice(0, MAX_HIT_LOCATIONS).map((s) => lineOf(text, s))]);
       }
       rows.sort((a, b) => b[1] - a[1]); // stable in modern JS engines
       return rows;
@@ -1394,7 +1400,7 @@
       let count = 0;
       let m;
       while ((m = rx.exec(text)) !== null) {
-        if (count < 5) lines.push(lineOf(text, m.index));
+        if (count < MAX_HIT_LOCATIONS) lines.push(lineOf(text, m.index));
         count++;
         if (m.index === rx.lastIndex) rx.lastIndex++;
       }
@@ -1441,7 +1447,7 @@
     }
     const artifacts = [];
     for (const [label, starts] of artRows) {
-      artifacts.push([label, starts.length, starts.slice(0, 5).map((s) => lineOf(text, s))]);
+      artifacts.push([label, starts.length, starts.slice(0, MAX_HIT_LOCATIONS).map((s) => lineOf(text, s))]);
     }
     artifacts.sort((a, b) => b[1] - a[1]); // stable in modern JS engines
     const artTotal = artifacts.reduce((t, r) => t + r[1], 0);

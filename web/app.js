@@ -569,7 +569,10 @@
 
   function linesLabel(lines) {
     if (!lines || !lines.length) return "";
-    return window.NoslopI18N.t("finding.linesLabel", { lines: lines.join(", ") });
+    // The hit count badge next to this already carries the true total, so
+    // showing more than a handful of locations here just crowds the card -
+    // mirrors the CLI report's five-line display cap.
+    return window.NoslopI18N.t("finding.linesLabel", { lines: lines.slice(0, 5).join(", ") });
   }
 
   function buildFindingItem(term, count, lines, hint) {

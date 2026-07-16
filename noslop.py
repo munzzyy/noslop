@@ -1445,6 +1445,16 @@ def strip_markdown_code(text):
     return "\n".join(out)
 
 
+# Every finding category keeps at most this many example line numbers - the
+# count (n) in each result row is always the true total, this only bounds how
+# many locations ride along with it, so a pathological input (the same token
+# repeated thousands of times) can't blow up --json/--rdjson output. High
+# enough that any realistic document surfaces every hit - --rdjson feeds an
+# editor's diagnostics list, and a finding an editor never sees is a finding
+# nobody fixes.
+MAX_HIT_LOCATIONS = 200
+
+
 def find_all(text_lower, needle):
     """Word-boundary match for a buzzword or phrase, tolerant of the line
     wraps git and editors put in the middle of a phrase. "as an ai" won't
@@ -1692,7 +1702,7 @@ def analyze(text, buzzwords=None, phrases=None, lang=None, lang_source=None,
         for s, kind, key in kept:
             if kind == which:
                 counts.setdefault(key, []).append(s)
-        rows = [(key, len(starts), [line_of(text, s) for s in starts[:5]])
+        rows = [(key, len(starts), [line_of(text, s) for s in starts[:MAX_HIT_LOCATIONS]])
                 for key, starts in counts.items()]
         rows.sort(key=lambda x: -x[1])
         return rows
@@ -1737,7 +1747,7 @@ def analyze(text, buzzwords=None, phrases=None, lang=None, lang_source=None,
         matches = list(re.finditer(rx, text))
         if matches:
             pat.append((label, len(matches), weight, hint,
-                        [line_of(text, m.start()) for m in matches[:5]]))
+                        [line_of(text, m.start()) for m in matches[:MAX_HIT_LOCATIONS]]))
             pat_raw += max(0, len(matches) - free) * weight
 
     emdash = len(re.findall(r"—", text))
@@ -1764,7 +1774,7 @@ def analyze(text, buzzwords=None, phrases=None, lang=None, lang_source=None,
         if s > art_end + 1:
             art_rows.setdefault(label, []).append(s)
         art_end = max(art_end, e)
-    artifacts = [(label, len(starts), [line_of(text, s) for s in starts[:5]])
+    artifacts = [(label, len(starts), [line_of(text, s) for s in starts[:MAX_HIT_LOCATIONS]])
                  for label, starts in art_rows.items()]
     artifacts.sort(key=lambda x: -x[1])
     art_total = sum(n for _, n, _ in artifacts)
@@ -2070,30 +2080,30 @@ def report(r, quiet=False):
     if r["ai_artifacts"]:
         out.append("\nChat-UI residue (direct paste evidence - scores the hard verdict on its own):")
         for label, n, lines in r["ai_artifacts"]:
-            out.append(f"  {n:>2}x  {label} (lines {', '.join(map(str, lines))})")
+            out.append(f"  {n:>2}x  {label} (lines {', '.join(map(str, lines[:5]))})")
     if r["buzzwords"]:
         out.append("\nLLM buzzwords:")
         for w, n, lines in r["buzzwords"]:
-            out.append(f"  {n:>2}x  {w:<18} (lines {', '.join(map(str, lines))})")
+            out.append(f"  {n:>2}x  {w:<18} (lines {', '.join(map(str, lines[:5]))})")
     if r["phrases"]:
         out.append("\nFiller phrases:")
         for p, n, lines in r["phrases"]:
-            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines))})')
+            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines[:5]))})')
     if r["patterns"]:
         out.append("\nConstructions:")
         for label, n, weight, hint, lines in r["patterns"]:
             tag = "" if weight else "  [style, not scored]"
-            out.append(f"  {n:>2}x  {label}{tag} (lines {', '.join(map(str, lines))})")
+            out.append(f"  {n:>2}x  {label}{tag} (lines {', '.join(map(str, lines[:5]))})")
             out.append(f"        -> {hint}")
     if r["copula_avoidance"]:
         tag = "" if r["copula_avoidance_scored"] else "  [below the density gate, not scored]"
         out.append(f"\nCopula-avoidance phrases:{tag}")
         for p, n, lines in r["copula_avoidance"]:
-            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines))})')
+            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines[:5]))})')
     if r["scope_inflation"]:
         out.append("\nScope-inflation phrases:")
         for p, n, lines in r["scope_inflation"]:
-            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines))})')
+            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines[:5]))})')
     misc = []
     if r["em_dash_excess"]:
         misc.append(f"{r['em_dashes']} em dashes is dense for the length (vary the punctuation)")
@@ -2921,7 +2931,7 @@ def analyze_code(text, ext=None, config=None, lang=None):
         for s, kind, key in kept:
             if kind == which:
                 counts.setdefault(key, []).append(s)
-        rows = [(key, len(starts), [real_line(s) for s in starts[:5]])
+        rows = [(key, len(starts), [real_line(s) for s in starts[:MAX_HIT_LOCATIONS]])
                 for key, starts in counts.items()]
         rows.sort(key=lambda x: -x[1])
         return rows
@@ -2964,8 +2974,8 @@ def analyze_code(text, ext=None, config=None, lang=None):
     inv_in_strings = sum(string_text.count(ch) for ch in INVISIBLE_CHARS)
     inv_scored = max(0, len(inv_lines) - inv_in_strings)
     if inv_scored:
-        art_rows["invisible unicode character"] = sorted(inv_lines)[:5]
-    artifacts = [(label, len(lines), sorted(lines)[:5])
+        art_rows["invisible unicode character"] = sorted(inv_lines)[:MAX_HIT_LOCATIONS]
+    artifacts = [(label, len(lines), sorted(lines)[:MAX_HIT_LOCATIONS])
                  for label, lines in art_rows.items() if lines]
     artifacts.sort(key=lambda x: -x[1])
     art_total = sum(n for _, n, _ in artifacts)
@@ -2978,7 +2988,7 @@ def analyze_code(text, ext=None, config=None, lang=None):
         matches = list(re.finditer(rx, prose_text))
         if matches:
             cpat.append((label, len(matches), weight, hint,
-                         [real_line(m.start()) for m in matches[:5]], gated))
+                         [real_line(m.start()) for m in matches[:MAX_HIT_LOCATIONS]], gated))
             points = max(0, len(matches) - free) * weight
             if gated:
                 cpat_raw_gated += points
@@ -2995,7 +3005,7 @@ def analyze_code(text, ext=None, config=None, lang=None):
             lines += [real_line(m.start())
                       for m in re.finditer(re.escape(ch), prose_text)]
         if lines:
-            typography.append((label, len(lines), weight, hint, sorted(lines)[:5]))
+            typography.append((label, len(lines), weight, hint, sorted(lines)[:MAX_HIT_LOCATIONS]))
             typo_raw += len(lines) * weight
 
     # Emoji in comments (quoted mentions already excused), in code regions
@@ -3160,30 +3170,30 @@ def report_code(r, quiet=False):
     if r["ai_artifacts"]:
         out.append("\nChat residue (direct paste evidence - scores the hard verdict on its own):")
         for label, n, lines in r["ai_artifacts"]:
-            out.append(f"  {n:>2}x  {label} (lines {', '.join(map(str, lines))})")
+            out.append(f"  {n:>2}x  {label} (lines {', '.join(map(str, lines[:5]))})")
     if r["buzzwords"]:
         out.append("\nLLM buzzwords in comments:")
         for w, n, lines in r["buzzwords"]:
-            out.append(f"  {n:>2}x  {w:<18} (lines {', '.join(map(str, lines))})")
+            out.append(f"  {n:>2}x  {w:<18} (lines {', '.join(map(str, lines[:5]))})")
     if r["phrases"]:
         out.append("\nFiller phrases in comments:")
         for p, n, lines in r["phrases"]:
-            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines))})')
+            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines[:5]))})')
     if r["comment_phrases"]:
         out.append("\nExplainer-voice comments (written for the requester, not the maintainer):")
         for p, n, lines in r["comment_phrases"]:
-            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines))})')
+            out.append(f'  {n:>2}x  "{p}" (lines {", ".join(map(str, lines[:5]))})')
     if r["comment_patterns"]:
         out.append("\nComment constructions:")
         for label, n, weight, hint, lines, gated in r["comment_patterns"]:
             tag = ("" if not gated or r["corroborated"]
                    else "  [needs corroboration, not scored]")
-            out.append(f"  {n:>2}x  {label}{tag} (lines {', '.join(map(str, lines))})")
+            out.append(f"  {n:>2}x  {label}{tag} (lines {', '.join(map(str, lines[:5]))})")
             out.append(f"        -> {hint}")
     if r["typography"]:
         out.append("\nTypography (chat-render characters in comments):")
         for label, n, weight, hint, lines in r["typography"]:
-            out.append(f"  {n:>2}x  {label} (lines {', '.join(map(str, lines))})")
+            out.append(f"  {n:>2}x  {label} (lines {', '.join(map(str, lines[:5]))})")
             out.append(f"        -> {hint}")
     misc = []
     if r["emoji"]:
